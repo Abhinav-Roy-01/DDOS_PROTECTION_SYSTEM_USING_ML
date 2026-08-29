@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Security Verification — Candy Match</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        :root{--bg:#040608;--bg-card:#0a0e14;--bg-surface:#111820;--border:#1a2332;--text:#e0e6ed;--text-dim:#5a6a7e;--accent:#00ff88;--accent-glow:rgba(0,255,136,0.15);--danger:#ff4444;--danger-glow:rgba(255,68,68,0.15);--warning:#ffaa00}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative}
+        body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(0,255,136,0.03) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(59,130,246,0.03) 0%,transparent 60%);z-index:0;pointer-events:none}
+        body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:0.1;z-index:0;pointer-events:none}
+        .shell{position:relative;z-index:1;width:100%;max-width:560px;padding:12px}
+        .header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px 12px 0 0;border-bottom:none}
+        .shield{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.5px}
+        .shield::before{content:'🛡️';font-size:18px}
+        .badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border-radius:20px;font-weight:600;letter-spacing:.5px;transition:all .3s}
+        .badge.waiting{background:rgba(255,170,0,.12);color:var(--warning);border:1px solid rgba(255,170,0,.25)}
+        .badge.playing{background:var(--accent-glow);color:var(--accent);border:1px solid rgba(0,255,136,.25);animation:pulse 2s ease-in-out infinite}
+        .badge.passed{background:var(--accent-glow);color:var(--accent);border:1px solid rgba(0,255,136,.4)}
+        .badge.failed{background:var(--danger-glow);color:var(--danger);border:1px solid rgba(255,68,68,.25)}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,0)}50%{box-shadow:0 0 12px 2px rgba(0,255,136,.15)}}
+        .wrap{position:relative;background:var(--bg-card);border:1px solid var(--border);border-top:none;overflow:hidden;display:flex;justify-content:center;align-items:center}
+        canvas{display:block;width:100%;max-width:490px;height:auto;cursor:pointer}
+        .pbar{position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--border);z-index:5}
+        .pfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#00ccff);transition:width .3s;box-shadow:0 0 8px rgba(0,255,136,.5)}
+        .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,6,8,.92);backdrop-filter:blur(8px);z-index:10;opacity:0;pointer-events:none;transition:opacity .4s}
+        .overlay.visible{opacity:1;pointer-events:auto}
+        .overlay h2{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:8px}
+        .overlay p{font-size:14px;color:var(--text-dim);margin-bottom:24px;text-align:center;max-width:350px;line-height:1.6}
+        .overlay .icon{font-size:48px;margin-bottom:16px;animation:bounceIn .5s ease}
+        .btn{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:12px 32px;border:none;border-radius:8px;cursor:pointer;letter-spacing:.5px;transition:all .2s;background:var(--accent);color:#000}
+        .btn:hover{box-shadow:0 0 24px rgba(0,255,136,.3);transform:translateY(-1px)}
+        @keyframes bounceIn{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+        .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .info{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim)}
+        .instructions{margin-top:14px;padding:14px 20px;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;font-size:12px;line-height:1.7;color:var(--text-dim)}
+        .goal{color:var(--accent);font-weight:600}
+    </style>
+</head>
+<body>
+<div class="shell">
+    <div class="header">
+        <div class="shield">SECURITY VERIFICATION</div>
+        <span class="badge waiting" id="badge">WAITING</span>
+    </div>
+    <div class="wrap">
+        <canvas id="gc" width="490" height="490"></canvas>
+        <div class="pbar"><div class="pfill" id="pfill"></div></div>
+        <div class="overlay visible" id="ov-start">
+            <div class="icon">🍬</div>
+            <h2 style="color:var(--accent)">Candy Match</h2>
+            <p>Swap adjacent candies to match 3+ in a row or column.<br>Score <span class="goal">150 points</span> to pass.</p>
+            <button class="btn" onclick="startGame()">START CHALLENGE</button>
+        </div>
+        <div class="overlay" id="ov-success">
+            <div class="icon">✅</div>
+            <h2 style="color:var(--accent)">Verified!</h2>
+            <p id="suc-msg">Verifying...</p>
+            <div class="spinner" id="suc-spin"></div>
+        </div>
+        <div class="overlay" id="ov-fail">
+            <div class="icon">💀</div>
+            <h2 style="color:var(--danger)">Game Over</h2>
+            <p id="fail-msg">Error</p>
+            <button class="btn" id="btn-retry" onclick="retryGame()">RETRY</button>
+        </div>
+    </div>
+    <div class="info">
+        <div id="ui-moves">MOVES: 0</div>
+        <div id="ui-score">SCORE: 0 / 150</div>
+    </div>
+    <div class="instructions">
+        Click a candy, then click an <strong>adjacent</strong> candy to swap.
+        Match <strong>3+</strong> same-color candies in a row/column.
+        Reach <span class="goal">150 points</span> to pass verification.
+    </div>
+</div>
+<script>
+const CFG = {
+    gameId: "{{ game_id }}", partialToken: "{{ partial_token }}",
+    gameState: "{{ game_state }}", errorMessage: "{{ error_message }}",
+    VERIFY: "/captcha/verify", FAIL: "/captcha/fail", NEW: "/captcha/new_game",
+    THRESHOLD: 150
+};
+
+const R=7, C=7, CELL=64, PAD=21, CR=24, NT=5;
+const COLORS=[
+    {f:'#ff4466',g:'rgba(255,68,102,0.4)',l:'#ff8899'},
+    {f:'#4499ff',g:'rgba(68,153,255,0.4)',l:'#88bbff'},
+    {f:'#44dd77',g:'rgba(68,221,119,0.4)',l:'#88ffaa'},
+    {f:'#ffaa33',g:'rgba(255,170,51,0.4)',l:'#ffcc77'},
+    {f:'#cc55ff',g:'rgba(204,85,255,0.4)',l:'#dd99ff'}
+];
+
+const cv=document.getElementById('gc'), cx=cv.getContext('2d');
+let grid=[], sel=null, score=0, moves=0, state='waiting', busy=false;
+let particles=[], hoverCell=null;
+
+// ── Behavior Tracker ──
+const BT={sc:0,iv:0,mt:[],lt:0,dev:'mouse',ds:false,
+    swap(v){if(v)this.sc++;else this.iv++;const n=performance.now();if(this.lt>0)this.mt.push(Math.round(n-this.lt));this.lt=n},
+    device(d){if(!this.ds){this.dev=d;this.ds=true}},
+    data(){return{swap_count:this.sc,invalid_swaps:this.iv,move_times:this.mt,input_device:this.dev}},
+    reset(){this.sc=0;this.iv=0;this.mt=[];this.lt=0;this.ds=false;this.dev='mouse'}
+};
+
+// ── Helpers ──
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const ease=t=>t<.5?2*t*t:-1+(4-2*t)*t;
+const cx_=c=>PAD+c*CELL+CELL/2, cy_=r=>PAD+r*CELL+CELL/2;
+
+// ── Grid Init (no starting matches) ──
+function initGrid(){
+    grid=[];
+    for(let r=0;r<R;r++){grid[r]=[];for(let c=0;c<C;c++){
+        let t; do{t=Math.floor(Math.random()*NT)}
+        while((c>=2&&grid[r][c-1]===t&&grid[r][c-2]===t)||(r>=2&&grid[r-1][c]===t&&grid[r-2][c]===t));
+        grid[r][c]=t;
+    }}
+}
+
+// ── Match Detection ──
+function findMatches(){
+    const m=new Set();
+    for(let r=0;r<R;r++){let c=0;while(c<C){
+        const t=grid[r][c];if(t===-1){c++;continue}
+        let e=c;while(e+1<C&&grid[r][e+1]===t)e++;
+        if(e-c>=2)for(let i=c;i<=e;i++)m.add(r*C+i);
+        c=e+1;
+    }}
+    for(let c=0;c<C;c++){let r=0;while(r<R){
+        const t=grid[r][c];if(t===-1){r++;continue}
+        let e=r;while(e+1<R&&grid[e+1][c]===t)e++;
+        if(e-r>=2)for(let i=r;i<=e;i++)m.add(i*C+c);
+        r=e+1;
+    }}
+    return m;
+}
+
+// ── Gravity ──
+function applyGravity(){
+    const mv=[];
+    for(let c=0;c<C;c++){let w=R-1;for(let r=R-1;r>=0;r--){
+        if(grid[r][c]!==-1){if(r!==w){mv.push({fr:r,fc:c,tr:w,tc:c});grid[w][c]=grid[r][c];grid[r][c]=-1}w--}
+    }}
+    return mv;
+}
+
+function fillEmpty(){
+    const nw=[];
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++)
+        if(grid[r][c]===-1){grid[r][c]=Math.floor(Math.random()*NT);nw.push({r,c})}
+    return nw;
+}
+
+function hasValidMoves(){
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+        if(c<C-1){[grid[r][c],grid[r][c+1]]=[grid[r][c+1],grid[r][c]];
+            if(findMatches().size>0){[grid[r][c],grid[r][c+1]]=[grid[r][c+1],grid[r][c]];return true}
+            [grid[r][c],grid[r][c+1]]=[grid[r][c+1],grid[r][c]]}
+        if(r<R-1){[grid[r][c],grid[r+1][c]]=[grid[r+1][c],grid[r][c]];
+            if(findMatches().size>0){[grid[r][c],grid[r+1][c]]=[grid[r+1][c],grid[r][c]];return true}
+            [grid[r][c],grid[r+1][c]]=[grid[r+1][c],grid[r][c]]}
+    }
+    return false;
+}
+
+// ── Drawing ──
+let animOverrides=null; // {type, data}
+
+function draw(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    // Background
+    const bg=cx.createLinearGradient(0,0,0,cv.height);
+    bg.addColorStop(0,'#060a10');bg.addColorStop(1,'#0c1218');
+    cx.fillStyle=bg;cx.fillRect(0,0,cv.width,cv.height);
+
+    // Grid cells
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+        const x=PAD+c*CELL, y=PAD+r*CELL;
+        cx.fillStyle=(r+c)%2===0?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.01)';
+        cx.fillRect(x+1,y+1,CELL-2,CELL-2);
+        // Hover highlight
+        if(hoverCell&&hoverCell.r===r&&hoverCell.c===c&&!busy){
+            cx.fillStyle='rgba(255,255,255,0.04)';cx.fillRect(x+1,y+1,CELL-2,CELL-2);
+        }
+    }
+    cx.strokeStyle='#1a2332';cx.lineWidth=1;
+    cx.strokeRect(PAD-.5,PAD-.5,C*CELL+1,R*CELL+1);
+
+    // Build position overrides map
+    const overMap=new Map(); // index -> {x,y,scale,alpha}
+    if(animOverrides){
+        const a=animOverrides;
+        if(a.type==='swap'){
+            const {r1,c1,r2,c2,t}=a.data;
+            const et=ease(t);
+            overMap.set(r1*C+c1,{x:cx_(c1)+(cx_(c2)-cx_(c1))*et, y:cy_(r1)+(cy_(r2)-cy_(r1))*et, s:1, a:1});
+            overMap.set(r2*C+c2,{x:cx_(c2)+(cx_(c1)-cx_(c2))*et, y:cy_(r2)+(cy_(r1)-cy_(r2))*et, s:1, a:1});
+        } else if(a.type==='remove'){
+            const {indices,t}=a.data;
+            for(const i of indices) overMap.set(i,{x:cx_(i%C),y:cy_(Math.floor(i/C)),s:1-t,a:1-t});
+        } else if(a.type==='fall'){
+            const {moves:mv,t}=a.data;
+            const et=t<1?1-Math.pow(1-t,2.5):1; // ease-out
+            for(const m of mv) overMap.set(m.tr*C+m.tc,{x:cx_(m.tc),y:cy_(m.fr)+(cy_(m.tr)-cy_(m.fr))*et,s:1,a:1});
+        } else if(a.type==='fill'){
+            const {cells,t}=a.data;
+            const et=ease(t);
+            for(const c of cells) overMap.set(c.r*C+c.c,{x:cx_(c.c),y:cy_(c.r),s:et,a:et});
+        }
+    }
+
+    // Draw candies
+    for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+        if(grid[r][c]===-1)continue;
+        const i=r*C+c, ov=overMap.get(i);
+        const x=ov?ov.x:cx_(c), y=ov?ov.y:cy_(r);
+        const sc=ov?ov.s:1, al=ov?ov.a:1;
+        const isSel=sel&&sel.r===r&&sel.c===c;
+        if(sc>0.01)drawCandy(x,y,grid[r][c],sc,al,isSel);
+    }
+
+    // Particles (floating score text)
+    const now=performance.now();
+    particles=particles.filter(p=>{
+        const t=(now-p.st)/800;if(t>=1)return false;
+        cx.save();cx.globalAlpha=1-t;cx.fillStyle='#00ff88';
+        cx.font='bold 18px "JetBrains Mono",monospace';cx.textAlign='center';
+        cx.shadowColor='rgba(0,255,136,0.6)';cx.shadowBlur=8;
+        cx.fillText(p.txt,p.x,p.y-40*t);cx.restore();return true;
+    });
+}
+
+function drawCandy(x,y,type,scale,alpha,isSel){
+    if(type<0||type>=NT)return;
+    const s=COLORS[type], rad=CR*scale;
+    cx.save();cx.globalAlpha=alpha;
+
+    // Selection glow (pulsing)
+    if(isSel){
+        const pulse=.6+.4*Math.sin(performance.now()*.006);
+        cx.shadowColor='rgba(255,255,255,0.6)';cx.shadowBlur=16*pulse;
+        cx.beginPath();cx.arc(x,y,rad+5,0,Math.PI*2);
+        cx.strokeStyle=`rgba(255,255,255,${.5+.3*pulse})`;cx.lineWidth=2.5;cx.stroke();
+        cx.shadowBlur=0;
+    }
+
+    // Main circle with gradient
+    const g=cx.createRadialGradient(x-rad*.3,y-rad*.3,rad*.1,x,y,rad);
+    g.addColorStop(0,s.l);g.addColorStop(1,s.f);
+    cx.beginPath();cx.arc(x,y,rad,0,Math.PI*2);
+    cx.fillStyle=g;cx.shadowColor=s.g;cx.shadowBlur=10;cx.fill();cx.shadowBlur=0;
+
+    // Inner highlight
+    cx.beginPath();cx.arc(x-rad*.25,y-rad*.25,rad*.35,0,Math.PI*2);
+    cx.fillStyle='rgba(255,255,255,0.25)';cx.fill();
+
+    // Rim
+    cx.beginPath();cx.arc(x,y,rad,0,Math.PI*2);
+    cx.strokeStyle='rgba(255,255,255,0.08)';cx.lineWidth=1;cx.stroke();
+    cx.restore();
+}
+
+// ── Animation Promises ──
+function animatePhase(type, data, dur){
+    return new Promise(resolve=>{
+        const st=performance.now();
+        function frame(now){
+            const t=Math.min((now-st)/dur,1);
+            data.t=t;
+            animOverrides={type,data};
+            draw();
+            if(t<1)requestAnimationFrame(frame);else{animOverrides=null;resolve()}
+        }
+        requestAnimationFrame(frame);
+    });
+}
+
+// ── Game Logic ──
+async function trySwap(r1,c1,r2,c2){
+    busy=true; sel=null;
+
+    // Animate swap
+    await animatePhase('swap',{r1,c1,r2,c2,t:0},200);
+    [grid[r1][c1],grid[r2][c2]]=[grid[r2][c2],grid[r1][c1]];
+
+    let matches=findMatches();
+    if(matches.size===0){
+        BT.swap(false);
+        // Swap back
+        await animatePhase('swap',{r1,c1,r2,c2,t:0},180);
+        [grid[r1][c1],grid[r2][c2]]=[grid[r2][c2],grid[r1][c1]];
+        draw(); busy=false; return;
+    }
+
+    BT.swap(true); moves++; updUI();
+
+    // Cascade loop
+    while(matches.size>0){
+        const pts=matches.size*10; score+=pts; updUI();
+
+        // Score particle at center of matched group
+        let sx=0,sy=0;
+        for(const i of matches){sx+=cx_(i%C);sy+=cy_(Math.floor(i/C))}
+        particles.push({x:sx/matches.size,y:sy/matches.size,txt:'+'+pts,st:performance.now()});
+
+        // Animate removal
+        await animatePhase('remove',{indices:matches,t:0},250);
+        for(const i of matches){grid[Math.floor(i/C)][i%C]=-1}
+        draw(); await wait(50);
+
+        // Gravity
+        const mv=applyGravity();
+        if(mv.length>0) await animatePhase('fall',{moves:mv,t:0},220);
+        draw(); await wait(30);
+
+        // Fill
+        const nw=fillEmpty();
+        if(nw.length>0) await animatePhase('fill',{cells:nw,t:0},200);
+        draw(); await wait(30);
+
+        matches=findMatches();
+    }
+
+    if(!hasValidMoves()){initGrid();draw()}
+    if(score>=CFG.THRESHOLD){onPassed();return}
+    busy=false;
+}
+
+// ── Input ──
+cv.addEventListener('click',e=>{
+    if(busy||state!=='playing')return;
+    const rect=cv.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*(cv.width/rect.width);
+    const my=(e.clientY-rect.top)*(cv.height/rect.height);
+    const c=Math.floor((mx-PAD)/CELL), r=Math.floor((my-PAD)/CELL);
+    if(r<0||r>=R||c<0||c>=C){sel=null;draw();return}
+    BT.device('mouse');
+    if(!sel){sel={r,c};draw()}
+    else if(sel.r===r&&sel.c===c){sel=null;draw()}
+    else if(Math.abs(r-sel.r)+Math.abs(c-sel.c)===1){trySwap(sel.r,sel.c,r,c)}
+    else{sel={r,c};draw()}
+});
+
+cv.addEventListener('touchstart',e=>{
+    e.preventDefault();if(busy||state!=='playing')return;
+    const t=e.touches[0],rect=cv.getBoundingClientRect();
+    const mx=(t.clientX-rect.left)*(cv.width/rect.width);
+    const my=(t.clientY-rect.top)*(cv.height/rect.height);
+    const c=Math.floor((mx-PAD)/CELL), r=Math.floor((my-PAD)/CELL);
+    if(r<0||r>=R||c<0||c>=C){sel=null;draw();return}
+    BT.device('touch');
+    if(!sel){sel={r,c};draw()}
+    else if(sel.r===r&&sel.c===c){sel=null;draw()}
+    else if(Math.abs(r-sel.r)+Math.abs(c-sel.c)===1){trySwap(sel.r,sel.c,r,c)}
+    else{sel={r,c};draw()}
+},{passive:false});
+
+cv.addEventListener('mousemove',e=>{
+    const rect=cv.getBoundingClientRect();
+    const mx=(e.clientX-rect.left)*(cv.width/rect.width);
+    const my=(e.clientY-rect.top)*(cv.height/rect.height);
+    const c=Math.floor((mx-PAD)/CELL), r=Math.floor((my-PAD)/CELL);
+    if(r>=0&&r<R&&c>=0&&c<C)hoverCell={r,c};else hoverCell=null;
+});
+
+// ── Continuous Render (for pulsing selection + particles) ──
+let rafId;
+function renderLoop(){
+    if(state==='playing'&&!busy) draw();
+    rafId=requestAnimationFrame(renderLoop);
+}
+
+// ── Game Events ──
+function onPassed(){
+    state='verifying';busy=true;
+    setBadge('playing','VERIFYING...');
+    document.getElementById('suc-msg').textContent='Verifying your gameplay...';
+    document.getElementById('suc-spin').style.display='block';
+    show('ov-success');
+    verify();
+}
+
+async function verify(){
+    try{
+        const res=await fetch(CFG.VERIFY,{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({game_id:CFG.gameId,score:Math.floor(score),partial_token:CFG.partialToken,behavior_data:BT.data()})});
+        const j=await res.json();
+        if(j.status==='pass'){
+            state='passed';setBadge('passed','VERIFIED ✓');
+            document.getElementById('suc-msg').textContent="Verification successful! Redirecting...";
+            document.getElementById('suc-spin').style.display='none';
+            setTimeout(()=>window.location.href='/',2500);
+        }else if(j.status==='expired'){
+            state='failed';hideAll();
+            document.getElementById('fail-msg').textContent='Session expired. Click below to restart.';
+            show('ov-fail');document.getElementById('btn-retry').textContent='RESTART';
+        }else{
+            state='failed';setBadge('failed','REJECTED');hideAll();
+            document.getElementById('fail-msg').textContent=j.message||'Verification failed.';
+            show('ov-fail');document.getElementById('btn-retry').textContent='RETRY';
+        }
+    }catch(e){
+        state='failed';hideAll();
+        document.getElementById('fail-msg').textContent='Network error. Please retry.';
+        show('ov-fail');
+    }
+}
+
+function retryGame(){window.location.href=CFG.NEW}
+
+function startGame(){
+    hideAll();state='playing';score=0;moves=0;sel=null;busy=false;
+    BT.reset();setBadge('playing','ACTIVE');updUI();
+    initGrid();while(!hasValidMoves())initGrid();
+    draw();renderLoop();
+}
+
+// ── UI ──
+function show(id){document.getElementById(id).classList.add('visible')}
+function hideAll(){document.querySelectorAll('.overlay').forEach(e=>e.classList.remove('visible'))}
+function setBadge(cls,txt){const b=document.getElementById('badge');b.className='badge '+cls;b.textContent=txt}
+function updUI(){
+    document.getElementById('ui-score').textContent=`SCORE: ${Math.floor(score)} / ${CFG.THRESHOLD}`;
+    document.getElementById('ui-moves').textContent=`MOVES: ${moves}`;
+    document.getElementById('pfill').style.width=Math.min(score/CFG.THRESHOLD,1)*100+'%';
+}
+
+// ── Init ──
+initGrid();draw();
+if(CFG.gameState==='blocked'){show('ov-blocked');setBadge('failed','BLOCKED')}
+</script>
+</body>
+</html>

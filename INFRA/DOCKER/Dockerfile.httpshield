@@ -1,0 +1,11 @@
+# Dockerfile for the legacy HTTP-layer behavioral shield (Flask)
+FROM python:3.11-slim
+WORKDIR /app
+COPY HTTP-LAYER-SHIELD/API/requirements.txt .
+RUN pip install -r requirements.txt
+COPY HTTP-LAYER-SHIELD/API ./API
+COPY HTTP-LAYER-SHIELD/CAPTCHA ./CAPTCHA
+COPY HTTP-LAYER-SHIELD/DASHBOARD ./DASHBOARD
+COPY HTTP-LAYER-SHIELD/ML/MODELS ./ML/MODELS
+WORKDIR /app/API
+CMD ["python", "server.py"]

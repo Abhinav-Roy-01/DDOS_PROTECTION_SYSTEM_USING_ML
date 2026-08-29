@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ML DDoS Shield — README</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0a0c0f;
+  --surface:  #111418;
+  --surface2: #181c22;
+  --border:   #22282f;
+  --border2:  #2e3540;
+  --teal:     #00d4aa;
+  --teal2:    #00a882;
+  --blue:     #4d9eff;
+  --blue2:    #2b7fd4;
+  --purple:   #a78bfa;
+  --purple2:  #7c5cbf;
+  --amber:    #fbbf24;
+  --amber2:   #d97706;
+  --coral:    #fb7185;
+  --coral2:   #e11d48;
+  --green:    #34d399;
+  --green2:   #059669;
+  --red:      #f87171;
+  --red2:     #dc2626;
+  --gray:     #6b7280;
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+  --text3:    #64748b;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Syne', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── Scanline overlay ── */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,170,0.015) 2px, rgba(0,212,170,0.015) 4px);
+  pointer-events:none;
+  z-index:1000;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius:3px; }
+
+/* ── Layout ── */
+.wrap { max-width:960px; margin:0 auto; padding:0 24px 80px; }
+
+/* ── Hero ── */
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.hero::after {
+  content:'';
+  position:absolute;
+  bottom:-1px; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, var(--teal), transparent);
+}
+.hero-label {
+  font-size:11px;
+  color: var(--teal);
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  margin-bottom:16px;
+}
+.hero h1 {
+  font-family: var(--sans);
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight:800;
+  line-height:1.05;
+  letter-spacing:-.02em;
+  background: linear-gradient(135deg, var(--text) 0%, var(--teal) 60%, var(--blue) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:16px;
+}
+.hero-sub {
+  color: var(--text2);
+  font-size:15px;
+  max-width:580px;
+  margin-bottom:32px;
+  font-family: var(--mono);
+}
+
+/* ── Badges ── */
+.badges { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:40px; }
+.badge {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 12px;
+  border-radius:4px;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.05em;
+  border:1px solid;
+  font-family: var(--mono);
+}
+.badge-teal  { color:var(--teal);   border-color:var(--teal2);   background:rgba(0,212,170,.08); }
+.badge-blue  { color:var(--blue);   border-color:var(--blue2);   background:rgba(77,158,255,.08); }
+.badge-purple{ color:var(--purple); border-color:var(--purple2); background:rgba(167,139,250,.08); }
+.badge-amber { color:var(--amber);  border-color:var(--amber2);  background:rgba(251,191,36,.08); }
+.badge-coral { color:var(--coral);  border-color:var(--coral2);  background:rgba(251,113,133,.08); }
+.badge-green { color:var(--green);  border-color:var(--green2);  background:rgba(52,211,153,.08); }
+.badge-red   { color:var(--red);    border-color:var(--red2);    background:rgba(248,113,113,.08); }
+
+/* ── Section ── */
+.section { margin-top:64px; }
+.section-label {
+  display:flex; align-items:center; gap:12px;
+  font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color: var(--text3); margin-bottom:8px;
+}
+.section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+.section h2 {
+  font-family: var(--sans);
+  font-size:26px; font-weight:700;
+  color: var(--text);
+  margin-bottom:24px;
+  letter-spacing:-.01em;
+}
+
+/* ── Phase blocks ── */
+.phase {
+  border:1px solid var(--border);
+  border-radius:12px;
+  background: var(--surface);
+  margin-bottom:24px;
+  overflow:hidden;
+}
+.phase-header {
+  display:flex; align-items:center; gap:16px;
+  padding:18px 24px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  user-select:none;
+  transition: background .15s;
+}
+.phase-header:hover { background: var(--surface2); }
+.phase-num {
+  width:32px; height:32px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; font-family:var(--sans);
+  flex-shrink:0;
+}
+.phase-title { font-family:var(--sans); font-size:16px; font-weight:600; flex:1; }
+.phase-time { font-size:11px; color:var(--text3); }
+.phase-arrow { color:var(--text3); font-size:12px; transition:transform .2s; }
+.phase.open .phase-arrow { transform:rotate(90deg); }
+.phase-body { padding:24px; display:none; }
+.phase.open .phase-body { display:block; }
+
+/* ── Flowchart ── */
+.flow {
+  display:flex; flex-direction:column; align-items:center;
+  gap:0; margin:24px 0;
+}
+.flow-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; }
+.flow-node {
+  padding:10px 18px; border-radius:8px;
+  font-size:12px; font-weight:500;
+  border:1px solid; text-align:center;
+  font-family:var(--mono);
+  line-height:1.4;
+}
+.flow-node small { display:block; font-size:10px; opacity:.7; margin-top:2px; }
+.fn-teal   { color:var(--teal);   border-color:var(--teal2);   background:rgba(0,212,170,.1); }
+.fn-blue   { color:var(--blue);   border-color:var(--blue2);   background:rgba(77,158,255,.1); }
+.fn-purple { color:var(--purple); border-color:var(--purple2); background:rgba(167,139,250,.1); }
+.fn-amber  { color:var(--amber);  border-color:var(--amber2);  background:rgba(251,191,36,.1); }
+.fn-coral  { color:var(--coral);  border-color:var(--coral2);  background:rgba(251,113,133,.1); }
+.fn-green  { color:var(--green);  border-color:var(--green2);  background:rgba(52,211,153,.1); }
+.fn-red    { color:var(--red);    border-color:var(--red2);    background:rgba(248,113,113,.1); }
+.fn-gray   { color:var(--text2);  border-color:var(--border2); background:var(--surface2); }
+
+.flow-arrow {
+  font-size:20px; color:var(--border2); line-height:1;
+  margin:4px 0;
+}
+.flow-arrow-label { font-size:10px; color:var(--text3); margin-top:-2px; margin-bottom:2px; text-align:center; }
+.flow-split { display:flex; gap:16px; align-items:flex-start; justify-content:center; flex-wrap:wrap; margin:4px 0; }
+.flow-split-col { display:flex; flex-direction:column; align-items:center; gap:0; }
+
+/* ── Code block ── */
+.code-wrap { position:relative; margin:16px 0; }
+.code-label {
+  position:absolute; top:12px; right:12px;
+  font-size:10px; color:var(--text3); letter-spacing:.1em;
+}
+pre {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:20px;
+  overflow-x:auto;
+  font-family:var(--mono);
+  font-size:12px;
+  line-height:1.6;
+  color:var(--text2);
+}
+.kw  { color:var(--purple); }
+.str { color:var(--green); }
+.cm  { color:var(--text3); font-style:italic; }
+.fn  { color:var(--blue); }
+.num { color:var(--amber); }
+.op  { color:var(--coral); }
+
+/* ── Tool grid ── */
+.tool-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  gap:12px; margin:16px 0;
+}
+.tool-card {
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  transition: border-color .2s, background .2s;
+}
+.tool-card:hover { border-color:var(--border2); background:var(--surface2); }
+.tool-name { font-family:var(--sans); font-size:14px; font-weight:600; margin-bottom:4px; }
+.tool-desc { font-size:11px; color:var(--text3); line-height:1.5; }
+.tool-version { font-size:10px; margin-top:8px; opacity:.6; }
+
+/* ── Feature table ── */
+table {
+  width:100%; border-collapse:collapse;
+  margin:16px 0; font-size:12px;
+}
+th {
+  text-align:left; padding:10px 14px;
+  border-bottom:1px solid var(--border2);
+  color:var(--text3); font-size:10px;
+  letter-spacing:.1em; text-transform:uppercase;
+  font-weight:500;
+}
+td { padding:10px 14px; border-bottom:1px solid var(--border); color:var(--text2); }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--surface2); }
+td:first-child { color:var(--teal); font-weight:500; }
+
+/* ── Terminal block ── */
+.terminal {
+  background:#060809;
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+  margin:16px 0;
+}
+.terminal-bar {
+  background:var(--surface);
+  padding:10px 16px;
+  display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid var(--border);
+}
+.dot { width:10px; height:10px; border-radius:50%; }
+.dot-red   { background:#ff5f57; }
+.dot-amber { background:#ffbd2e; }
+.dot-green { background:#28c941; }
+.terminal-title { font-size:11px; color:var(--text3); margin-left:8px; }
+.terminal-body { padding:16px 20px; font-size:12px; line-height:1.8; color:#7dd3a8; }
+.terminal-body .prompt { color:var(--teal); }
+.terminal-body .cmd    { color:var(--text); }
+.terminal-body .out    { color:var(--text3); }
+.terminal-body .ok     { color:var(--green); }
+.terminal-body .warn   { color:var(--amber); }
+.terminal-body .err    { color:var(--red); }
+
+/* ── API endpoint ── */
+.endpoint {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  margin-bottom:8px;
+}
+.method {
+  padding:3px 8px; border-radius:4px;
+  font-size:10px; font-weight:700;
+  letter-spacing:.05em; flex-shrink:0; margin-top:1px;
+}
+.method-get  { background:rgba(52,211,153,.15);  color:var(--green); }
+.method-post { background:rgba(77,158,255,.15);  color:var(--blue); }
+.ep-path { color:var(--teal); font-size:13px; margin-bottom:3px; }
+.ep-desc { color:var(--text3); font-size:11px; }
+
+/* ── Inline note ── */
+.note {
+  display:flex; gap:12px; align-items:flex-start;
+  padding:14px 16px; border-radius:8px;
+  margin:16px 0; font-size:12px;
+}
+.note-info   { background:rgba(77,158,255,.08);  border-left:3px solid var(--blue);   color:var(--text2); }
+.note-warn   { background:rgba(251,191,36,.08);  border-left:3px solid var(--amber);  color:var(--text2); }
+.note-danger { background:rgba(248,113,113,.08); border-left:3px solid var(--red);    color:var(--text2); }
+.note-tip    { background:rgba(0,212,170,.08);   border-left:3px solid var(--teal);   color:var(--text2); }
+.note-icon   { flex-shrink:0; margin-top:1px; }
+
+/* ── Progress timeline ── */
+.timeline { position:relative; padding-left:28px; margin:16px 0; }
+.timeline::before { content:''; position:absolute; left:7px; top:8px; bottom:8px; width:1px; background:var(--border2); }
+.tl-item { position:relative; margin-bottom:20px; }
+.tl-dot {
+  position:absolute; left:-25px; top:4px;
+  width:14px; height:14px; border-radius:50%;
+  border:2px solid var(--bg);
+}
+.tl-hour { font-size:10px; color:var(--text3); margin-bottom:2px; letter-spacing:.05em; }
+.tl-title { font-family:var(--sans); font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.tl-desc { font-size:11px; color:var(--text3); }
+
+/* ── Color palette strip ── */
+.palette { display:flex; gap:4px; margin:16px 0; flex-wrap:wrap; }
+.palette-swatch {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  min-width:60px;
+}
+.swatch-box { width:48px; height:32px; border-radius:6px; border:1px solid rgba(255,255,255,.1); }
+.swatch-label { font-size:9px; color:var(--text3); letter-spacing:.05em; }
+
+/* ── Animations ── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+@keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.5} }
+@keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.fade-up { animation: fadeUp .5s ease both; }
+.pulse   { animation: pulse 2s infinite; }
+
+.cursor::after {
+  content:'█'; animation:blink 1s infinite;
+  color:var(--teal); margin-left:2px; font-size:.8em;
+}
+
+/* ── Highlight ── */
+code {
+  background:rgba(0,212,170,.1); color:var(--teal);
+  padding:2px 6px; border-radius:4px;
+  font-family:var(--mono); font-size:.9em;
+}
+
+p { color:var(--text2); margin-bottom:12px; line-height:1.8; }
+ul { color:var(--text2); padding-left:20px; margin-bottom:12px; }
+li { margin-bottom:4px; font-size:13px; }
+
+/* ── TOC ── */
+.toc {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:20px 24px;
+  margin:32px 0;
+}
+.toc-title { font-family:var(--sans); font-size:13px; font-weight:600; color:var(--text3); margin-bottom:12px; letter-spacing:.05em; }
+.toc-list { list-style:none; padding:0; columns:2; gap:24px; }
+.toc-list li { margin-bottom:6px; break-inside:avoid; }
+.toc-list a {
+  color:var(--text2); text-decoration:none; font-size:12px;
+  display:flex; align-items:center; gap:8px;
+  transition:color .15s;
+}
+.toc-list a:hover { color:var(--teal); }
+.toc-list a::before { content:'→'; color:var(--border2); font-size:10px; }
+
+/* ── Footer ── */
+.footer {
+  margin-top:80px; padding-top:32px;
+  border-top:1px solid var(--border);
+  text-align:center; color:var(--text3); font-size:11px;
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<!-- ════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════ -->
+<div class="hero fade-up">
+  <div class="hero-label">// hackathon project · cybersecurity · ml</div>
+  <h1>ML DDoS Shield</h1>
+  <p class="hero-sub">
+    A machine-learning powered DDoS detection and mitigation system that uses behavioral analytics,
+    anomaly detection, a game-based CAPTCHA, and an IP honeypot trap to neutralize malicious traffic
+    — without disrupting real users.
+  </p>
+
+  <div class="badges">
+    <span class="badge badge-teal">Python 3.10+</span>
+    <span class="badge badge-blue">FastAPI</span>
+    <span class="badge badge-blue">Flask</span>
+    <span class="badge badge-purple">scikit-learn</span>
+    <span class="badge badge-purple">IsolationForest</span>
+    <span class="badge badge-purple">RandomForest</span>
+    <span class="badge badge-amber">Redis</span>
+    <span class="badge badge-teal">Node 18+</span>
+    <span class="badge badge-coral">React + Vite</span>
+    <span class="badge badge-green">Streamlit</span>
+    <span class="badge badge-amber">ngrok</span>
+    <span class="badge badge-red">Docker</span>
+    <span class="badge badge-green">AbuseIPDB</span>
+    <span class="badge badge-coral">Locust</span>
+    <span class="badge badge-blue">MIT License</span>
+  </div>
+
+  <div class="terminal" style="max-width:520px">
+    <div class="terminal-bar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-amber"></div>
+      <div class="dot dot-green"></div>
+      <span class="terminal-title">ddos-shield — bash</span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="prompt">$</span> <span class="cmd">bash run.sh</span></div>
+      <div class="out">[+] Redis started on :6379</div>
+      <div class="out">[+] Flask app running on :5000</div>
+      <div class="out">[+] Generating 5000 training sessions...</div>
+      <div class="ok">[✓] IsolationForest trained — model.pkl saved</div>
+      <div class="ok">[✓] RandomForest trained — accuracy 97.3%</div>
+      <div class="out">[+] ngrok tunnel → https://abc123.ngrok-free.app</div>
+      <div class="ok">[✓] Real-time detector active</div>
+      <div class="warn">[!] 203.45.12.99 — score 0.94 — HONEYPOT</div>
+      <div class="cursor"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TABLE OF CONTENTS
+════════════════════════════════════════════ -->
+<div class="toc fade-up">
+  <div class="toc-title">TABLE OF CONTENTS</div>
+  <ul class="toc-list">
+    <li><a href="#color-palette">Color palette</a></li>
+    <li><a href="#tools">Tool stack</a></li>
+    <li><a href="#setup">Chronological setup</a></li>
+    <li><a href="#dataset">Dataset generation</a></li>
+    <li><a href="#ml">ML training pipeline</a></li>
+    <li><a href="#live">Live request flow</a></li>
+    <li><a href="#captcha">Game CAPTCHA flow</a></li>
+    <li><a href="#honeypot">Honeypot trap flow</a></li>
+    <li><a href="#running">Running everything</a></li>
+    <li><a href="#api">API reference</a></li>
+    <li><a href="#demo">Demo script</a></li>
+    <li><a href="#features">Feature table</a></li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════
+     COLOR PALETTE
+════════════════════════════════════════════ -->
+<div class="section" id="color-palette">
+  <div class="section-label">01 · visual system</div>
+  <h2>Color Palette</h2>
+  <p>Every component in this system is color-coded by category. This palette is used consistently across architecture diagrams, terminal output, and the dashboard.</p>
+
+  <div class="palette">
+    <div class="palette-swatch"><div class="swatch-box" style="background:#00d4aa"></div><div class="swatch-label">TEAL<br>#00d4aa<br>Human traffic</div></div>
+    <div class="palette-swatch"><div class="swatch-box" style="background:#4d9eff"></div><div class="swatch-label">BLUE<br>#4d9eff<br>App layer</div></div>
+    <div class="palette-swatch"><div class="swatch-box" style="background:#a78bfa"></div><div class="swatch-label">PURPLE<br>#a78bfa<br>ML pipeline</div></div>
+    <div class="palette-swatch"><div class="swatch-box" style="background:#fbbf24"></div><div class="swatch-label">AMBER<br>#fbbf24<br>Decision / middleware</div></div>
+    <div class="palette-swatch"><div class="swatch-box" style="background:#fb7185"></div><div class="swatch-label">CORAL<br>#fb7185<br>CAPTCHA</div></div>
+    <div class="palette-swatch"><div class="swatch-box" style="background:#34d399"></div><div class="swatch-label">GREEN<br>#34d399<br>Allow / pass</div></div>
+    <div class="palette-swatch"><div class="swatch-box" style="background:#f87171"></div><div class="swatch-label">RED<br>#f87171<br>Bot / threat</div></div>
+    <div class="palette-swatch"><div class="swatch-box" style="background:#6b7280"></div><div class="swatch-label">GRAY<br>#6b7280<br>Neutral / infra</div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TOOL STACK
+════════════════════════════════════════════ -->
+<div class="section" id="tools">
+  <div class="section-label">02 · dependencies</div>
+  <h2>Complete Tool Stack</h2>
+  <p>Every tool used in the project, with its purpose and version requirement.</p>
+
+  <div style="margin-bottom:16px">
+    <div class="badge badge-teal" style="margin-bottom:8px;display:inline-flex">System requirements</div>
+    <div class="tool-grid">
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--teal)">Python</div>
+        <div class="tool-desc">Backend ML engine, FastAPI server, feature engineering, dataset generation</div>
+        <div class="tool-version">≥ 3.10</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--teal)">Node.js</div>
+        <div class="tool-desc">Frontend React app, Vite dev server, tracker.js build</div>
+        <div class="tool-version">≥ 18</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--red)">Docker Desktop</div>
+        <div class="tool-desc">Runs Redis container — no manual Redis install needed</div>
+        <div class="tool-version">Latest</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--amber)">ngrok</div>
+        <div class="tool-desc">Exposes localhost to public internet — gives you a live HTTPS URL</div>
+        <div class="tool-version">≥ 3.x</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div class="badge badge-purple" style="margin-bottom:8px;display:inline-flex">Python packages</div>
+    <div class="tool-grid">
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--purple)">fastapi</div>
+        <div class="tool-desc">Main API framework — handles /api/score, /api/dashboard, CAPTCHA routes</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--purple)">uvicorn[standard]</div>
+        <div class="tool-desc">ASGI server that runs FastAPI with WebSocket support</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--purple)">scikit-learn</div>
+        <div class="tool-desc">IsolationForest + RandomForest models, StandardScaler, classification metrics</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--purple)">numpy</div>
+        <div class="tool-desc">Feature vector math, synthetic data generation, variance calculations</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--purple)">pandas</div>
+        <div class="tool-desc">Dataset assembly, CSV I/O, window-based feature engineering</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--amber)">redis</div>
+        <div class="tool-desc">IP reputation cache, event log, action cache, honeypot log store</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--blue)">httpx</div>
+        <div class="tool-desc">Async HTTP client for AbuseIPDB API calls from the backend</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--blue)">python-dotenv</div>
+        <div class="tool-desc">Loads .env secrets — API keys, Redis host, CAPTCHA secret</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--blue)">flask</div>
+        <div class="tool-desc">Target app that receives simulated traffic, logs to traffic_log.csv</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--coral)">locust</div>
+        <div class="tool-desc">Traffic simulator — spawns NormalUser and BotAttacker workers</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--coral)">faker</div>
+        <div class="tool-desc">Generates fake IPs, user agents, usernames, and passwords for simulation</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--purple)">joblib</div>
+        <div class="tool-desc">Serializes trained models to model.pkl for persistent loading</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--green)">streamlit</div>
+        <div class="tool-desc">Admin dashboard — live charts, flagged IPs, CAPTCHA stats</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--green)">plotly</div>
+        <div class="tool-desc">Interactive charts in the Streamlit dashboard</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--teal)">colorama</div>
+        <div class="tool-desc">Red/green colored terminal output in detect.py live monitor</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="badge badge-coral" style="margin-bottom:8px;display:inline-flex">Frontend (npm)</div>
+    <div class="tool-grid">
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--coral)">React 18</div>
+        <div class="tool-desc">GameCaptcha component, Dashboard component, App root</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name" style="color:var(--coral)">Vite</div>
+        <div class="tool-desc">Frontend dev server and build tool</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note note-tip">
+    <span class="note-icon">→</span>
+    <span>Install all Python dependencies at once: <code>pip install fastapi uvicorn[standard] scikit-learn numpy pandas redis httpx python-dotenv flask locust faker joblib streamlit plotly colorama requests</code></span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     CHRONOLOGICAL SETUP
+════════════════════════════════════════════ -->
+<div class="section" id="setup">
+  <div class="section-label">03 · chronological setup</div>
+  <h2>Setup — Step by Step</h2>
+  <p>Follow these phases in exact order. Each phase builds on the last.</p>
+
+  <div class="timeline">
+    <div class="tl-item"><div class="tl-dot" style="background:var(--teal)"></div><div class="tl-hour">Hour 0–1</div><div class="tl-title">Phase 1 — System prerequisites + project scaffold</div><div class="tl-desc">Install Python, Node, Docker, ngrok · create folder structure</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--blue)"></div><div class="tl-hour">Hour 1–3</div><div class="tl-title">Phase 2 — Frontend metric collector</div><div class="tl-desc">tracker.js passively records all behavioral signals</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--amber)"></div><div class="tl-hour">Hour 3–5</div><div class="tl-title">Phase 3 — Flask target app + traffic simulation</div><div class="tl-desc">app.py routes · simulate_traffic.py · traffic_log.csv</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--purple)"></div><div class="tl-hour">Hour 5–8</div><div class="tl-title">Phase 4 — Dataset generation + ML training</div><div class="tl-desc">generate_dataset.py → human_only.csv → model.pkl</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--purple)"></div><div class="tl-hour">Hour 8–11</div><div class="tl-title">Phase 5 — FastAPI scoring backend + IP reputation</div><div class="tl-desc">/api/score · Redis · AbuseIPDB · decision engine</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--coral)"></div><div class="tl-hour">Hour 11–15</div><div class="tl-title">Phase 6 — Game CAPTCHA</div><div class="tl-desc">Dino-run canvas game · HMAC signing · captcha_routes.py</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--red)"></div><div class="tl-hour">Hour 15–18</div><div class="tl-title">Phase 7 — Honeypot server</div><div class="tl-desc">Mirror Flask app · tar-pitting · full request logging</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--amber)"></div><div class="tl-hour">Hour 18–20</div><div class="tl-title">Phase 8 — ngrok integration</div><div class="tl-desc">Expose backend · update tracker.js URL · verify pipeline</div></div>
+    <div class="tl-item"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-hour">Hour 20–24</div><div class="tl-title">Phase 9 — Dashboard + demo polish</div><div class="tl-desc">Streamlit dashboard · detect.py · run.sh · presentation prep</div></div>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="phase open" id="phase1">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(0,212,170,.15);color:var(--teal)">1</div>
+      <div class="phase-title">Prerequisites + Project Scaffold</div>
+      <div class="phase-time">Hour 0–1</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>Verify all system tools are installed before writing a single line of code.</p>
+      <div class="terminal">
+        <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">verify installs</span></div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> <span class="cmd">node --version</span> &nbsp;&nbsp;&nbsp;&nbsp; <span class="ok"># v18+ required</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">python --version</span> &nbsp;&nbsp; <span class="ok"># 3.10+ required</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">docker --version</span> &nbsp;&nbsp; <span class="ok"># any recent version</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">ngrok --version</span> &nbsp;&nbsp;&nbsp; <span class="ok"># 3.x required</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">pip --version</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="ok"># bundled with Python</span></div>
+        </div>
+      </div>
+      <div class="terminal">
+        <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">scaffold project</span></div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> <span class="cmd">mkdir -p ddos-shield/backend ddos-shield/honeypot ddos-shield/frontend</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">cd ddos-shield/frontend</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">npm create vite@latest . -- --template react</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">npm install</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">cd ../backend</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">pip install fastapi uvicorn[standard] scikit-learn numpy pandas redis httpx python-dotenv flask locust faker joblib streamlit plotly colorama requests</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">docker run -d -p 6379:6379 --name redis redis:alpine</span></div>
+          <div class="ok">[✓] Redis running on localhost:6379</div>
+        </div>
+      </div>
+      <div class="note note-info">
+        <span class="note-icon">i</span>
+        <span>Create a <code>.env</code> file in the backend folder: <code>ABUSEIPDB_KEY=your_key</code> · <code>CAPTCHA_SECRET=change-me-in-prod</code> · <code>REDIS_HOST=localhost</code></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase" id="phase2">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(77,158,255,.15);color:var(--blue)">2</div>
+      <div class="phase-title">Frontend Metric Collector (tracker.js)</div>
+      <div class="phase-time">Hour 1–3</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p><code>tracker.js</code> is a passive script that attaches to every user interaction without slowing the app. It computes 8 behavioral features and POSTs them to <code>/api/score</code> every 5 seconds.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-node fn-blue">Page loads<small>tracker.js imported</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-blue">addEventListener<small>click · mousemove · keydown · scroll</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-blue">computeFeatures()<small>entropy · variance · velocity</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-arrow-label">every 5 seconds</div>
+        <div class="flow-row">
+          <div class="flow-node fn-teal">POST /api/score<small>8 features + session_id</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-split">
+          <div class="flow-split-col">
+            <div class="flow-node fn-green">action: allow<small>continue normally</small></div>
+          </div>
+          <div class="flow-split-col">
+            <div class="flow-node fn-coral">action: captcha<small>triggerGameCaptcha()</small></div>
+          </div>
+          <div class="flow-split-col">
+            <div class="flow-node fn-red">action: redirect<small>→ honeypot URL</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note note-tip">
+        <span class="note-icon">→</span>
+        <span>Add one import to <code>main.jsx</code>: <code>import './tracker.js'</code> — that's it. The collector runs silently from there.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase" id="phase3">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(251,191,36,.15);color:var(--amber)">3</div>
+      <div class="phase-title">Flask Target App + Traffic Simulation</div>
+      <div class="phase-time">Hour 3–5</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>The Flask app is the target that traffic hits. <code>simulate_traffic.py</code> fires both human and bot sessions at it using Locust and Faker.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-node fn-teal">NormalUser (70%)<small>Faker IP · wait 2–8s</small></div>
+          <div style="width:32px;text-align:center;color:var(--border2)">+</div>
+          <div class="flow-node fn-red">BotAttacker (30%)<small>500 IP pool · wait 50ms</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-blue">Flask app :5000<small>/, /login, /products, /search, /api/data</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-gray">traffic_log.csv<small>timestamp · ip · endpoint · ua · status · response_ms</small></div>
+        </div>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">run simulation</span></div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> <span class="cmd">python app.py &amp;</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="out"># start target</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">python simulate_traffic.py --users 50 --spawn-rate 5 --duration 120s</span></div>
+          <div class="out">[10s] Normal: 312 req | Bot: 1847 req | Top: /login (843)</div>
+          <div class="out">[20s] Normal: 634 req | Bot: 3921 req | Top: /login (1802)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase" id="phase4">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(167,139,250,.15);color:var(--purple)">4</div>
+      <div class="phase-title">Dataset Generation + ML Training</div>
+      <div class="phase-time">Hour 5–8</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>Generate 5000 synthetic sessions to train the models before real traffic arrives. This gives the IsolationForest a warm start so it works immediately on day one.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-node fn-teal">4000 human sessions<small>casual · power · form · mobile</small></div>
+          <div style="width:32px;text-align:center;color:var(--border2)">+</div>
+          <div class="flow-node fn-red">1000 bot sessions<small>flooder · slow · headless · stuffer</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-arrow-label">generate_dataset.py</div>
+        <div class="flow-split">
+          <div class="flow-split-col">
+            <div class="flow-node fn-purple">human_only.csv<small>IsolationForest training input</small></div>
+          </div>
+          <div class="flow-split-col">
+            <div class="flow-node fn-gray">training_data.csv<small>full labeled set for evaluation</small></div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-arrow-label">ml_model.py / train.py</div>
+        <div class="flow-split">
+          <div class="flow-split-col">
+            <div class="flow-node fn-purple">IsolationForest<small>contamination=0.05</small></div>
+          </div>
+          <div class="flow-split-col">
+            <div class="flow-node fn-purple">RandomForest<small>100 trees · 80/20 split</small></div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-gray">model.pkl saved<small>joblib serialization</small></div>
+        </div>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">train models</span></div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> <span class="cmd">python generate_dataset.py</span></div>
+          <div class="ok">[✓] 5000 sessions generated → training_data.csv | human_only.csv</div>
+          <div><span class="prompt">$</span> <span class="cmd">python ml_model.py</span></div>
+          <div class="out">              precision    recall  f1-score</div>
+          <div class="ok">      human       0.98      0.97      0.97</div>
+          <div class="warn">        bot       0.92      0.95      0.93</div>
+          <div class="ok">[✓] model.pkl saved</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="phase" id="phase5">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(167,139,250,.15);color:var(--purple)">5</div>
+      <div class="phase-title">FastAPI Backend + IP Reputation + Decision Engine</div>
+      <div class="phase-time">Hour 8–11</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>The FastAPI backend is the brain. Every scored session goes through three checks in parallel before a decision is made.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <div class="flow-node fn-blue">POST /api/score<small>behavioral features arrive</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-amber">get_real_ip()<small>X-Forwarded-For header (ngrok)</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-amber">Redis fast-path check<small>is IP already flagged?</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-split">
+          <div class="flow-split-col">
+            <div class="flow-node fn-purple">ML scorer<small>IsolationForest + RandomForest</small></div>
+          </div>
+          <div class="flow-split-col">
+            <div class="flow-node fn-purple">AbuseIPDB<small>async reputation lookup</small></div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-amber">Decision engine<small>score + reputation + rate → action</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row">
+          <div class="flow-node fn-amber">Cache action in Redis<small>SETEX action:{ip} 300s</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-split">
+          <div class="flow-split-col"><div class="flow-node fn-green">allow</div></div>
+          <div class="flow-split-col"><div class="flow-node fn-coral">captcha</div></div>
+          <div class="flow-split-col"><div class="flow-node fn-red">redirect</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 6 -->
+  <div class="phase" id="phase6">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(251,113,133,.15);color:var(--coral)">6</div>
+      <div class="phase-title">Game CAPTCHA — Dino Run</div>
+      <div class="phase-time">Hour 11–15</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>When a session scores <em>suspicious</em>, a Dino-run game is served. The player must reach score 150 to receive a session token. HMAC signing prevents bots from faking the score.</p>
+
+      <div class="flow">
+        <div class="flow-row"><div class="flow-node fn-coral">Middleware triggers challenge<small>suspicious score detected</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-coral">GET /captcha/new_game<small>server issues game_id + HMAC fragment</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-coral">Canvas game served<small>Space / click / touch to jump</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-coral">Player scores<small>obstacles spawn, speed increases</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-amber">Score ≥ 150?</div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-split">
+          <div class="flow-split-col">
+            <div class="flow-node fn-green">Pass<small>HMAC verified → session token issued</small></div>
+          </div>
+          <div class="flow-split-col">
+            <div class="flow-node fn-coral">Fail<small>fail count + 1, retry</small></div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-node fn-red">3 fails → block IP<small>Redis flag + honeypot</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note note-warn">
+        <span class="note-icon">!</span>
+        <span>The HMAC <code>secret_fragment</code> is generated server-side per game session. A bot cannot POST a fake score of 999 — the server will reject it because the signature won't match.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 7 -->
+  <div class="phase" id="phase7">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(248,113,113,.15);color:var(--red)">7</div>
+      <div class="phase-title">Honeypot Server</div>
+      <div class="phase-time">Hour 15–18</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>Confirmed bots are silently redirected to a mirror server on port 8001. They never know they've been caught.</p>
+
+      <div class="flow">
+        <div class="flow-row"><div class="flow-node fn-red">IP confirmed bot<small>both models agree OR captcha fails ≥ 3</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-split">
+          <div class="flow-split-col">
+            <div class="flow-node fn-amber">Flag in Redis<small>SETEX ip:{ip} 86400s "bad"</small></div>
+          </div>
+          <div class="flow-split-col">
+            <div class="flow-node fn-red">RedirectResponse<small>all requests → :8001</small></div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-red">Honeypot server :8001<small>mirrors real app routes</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-split">
+          <div class="flow-split-col"><div class="flow-node fn-red">Tar-pit<small>asyncio.sleep 2–7s</small></div></div>
+          <div class="flow-split-col"><div class="flow-node fn-red">Log everything<small>ip · path · headers · body → Redis</small></div></div>
+          <div class="flow-split-col"><div class="flow-node fn-red">Fake response<small>convincing HTML / JSON</small></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 8 -->
+  <div class="phase" id="phase8">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(251,191,36,.15);color:var(--amber)">8</div>
+      <div class="phase-title">ngrok Integration — Go Live</div>
+      <div class="phase-time">Hour 18–20</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>ngrok punches a tunnel from your localhost to the public internet, giving you a real HTTPS URL for the demo.</p>
+
+      <div class="flow">
+        <div class="flow-row"><div class="flow-node fn-amber">ngrok authtoken configured<small>ngrok config add-authtoken YOUR_TOKEN</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-amber">ngrok http 8000<small>tunnel to FastAPI backend</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-amber">Public URL issued<small>https://abc123.ngrok-free.app</small></div></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-split">
+          <div class="flow-split-col"><div class="flow-node fn-blue">Update tracker.js<small>BACKEND_URL = ngrok URL</small></div></div>
+          <div class="flow-split-col"><div class="flow-node fn-amber">middleware reads<small>X-Forwarded-For for real IP</small></div></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-row"><div class="flow-node fn-green">Real browser hits ngrok URL<small>full pipeline active end-to-end</small></div></div>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">ngrok setup</span></div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> <span class="cmd">ngrok config add-authtoken YOUR_AUTHTOKEN</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">ngrok http 8000</span></div>
+          <div class="out">Forwarding  https://abc123.ngrok-free.app → localhost:8000</div>
+          <div class="out">Web Interface: http://127.0.0.1:4040</div>
+        </div>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">verify pipeline end-to-end</span></div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> <span class="cmd">curl https://abc123.ngrok-free.app/api/dashboard</span></div>
+          <div class="ok">[✓] JSON response received — pipeline live</div>
+          <div><span class="prompt">$</span> <span class="cmd">curl -X POST https://abc123.ngrok-free.app/api/score \</span></div>
+          <div class="cmd">&nbsp;&nbsp;-H "Content-Type: application/json" \</div>
+          <div class="cmd">&nbsp;&nbsp;-d '{"session_id":"test","click_count":5,"avg_click_interval":900,</div>
+          <div class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"click_interval_variance":180000,"click_interval_entropy":2.8,</div>
+          <div class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"mouse_velocity_variance":0.6,"max_element_click_rate":1.2,</div>
+          <div class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"scroll_events":5,"keystroke_count":20}'</div>
+          <div class="ok">{"action":"allow","score":0.18,"label":"human"}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 9 -->
+  <div class="phase" id="phase9">
+    <div class="phase-header" onclick="toggle(this)">
+      <div class="phase-num" style="background:rgba(52,211,153,.15);color:var(--green)">9</div>
+      <div class="phase-title">Dashboard + Demo Polish</div>
+      <div class="phase-time">Hour 20–24</div>
+      <div class="phase-arrow">▶</div>
+    </div>
+    <div class="phase-body">
+      <p>The Streamlit dashboard pulls live data from Redis every 3 seconds. <code>detect.py</code> prints a color-coded terminal table alongside it.</p>
+
+      <table>
+        <thead><tr><th>Section</th><th>What it shows</th></tr></thead>
+        <tbody>
+          <tr><td>Live traffic</td><td>Requests/sec over time, normal vs bot split, active IPs</td></tr>
+          <tr><td>Anomaly scores</td><td>Per-IP score history, label distribution pie chart</td></tr>
+          <tr><td>Flagged IPs</td><td>Table of blocked IPs with reason + timestamp</td></tr>
+          <tr><td>CAPTCHA stats</td><td>Challenges issued, pass rate, fail rate, score histogram</td></tr>
+          <tr><td>Honeypot log</td><td>Every request the bot sent while trapped</td></tr>
+          <tr><td>Model perf</td><td>Classification report, feature importance, confusion matrix</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     RUNNING EVERYTHING
+════════════════════════════════════════════ -->
+<div class="section" id="running">
+  <div class="section-label">04 · running</div>
+  <h2>Running Everything</h2>
+  <p>Open five terminals simultaneously. This is the recommended split-screen layout for the demo.</p>
+
+  <div class="terminal">
+    <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">T1 — FastAPI backend</span></div>
+    <div class="terminal-body">
+      <div><span class="prompt">$</span> <span class="cmd">cd backend</span></div>
+      <div><span class="prompt">$</span> <span class="cmd">uvicorn main:app --host 0.0.0.0 --port 8000 --reload</span></div>
+      <div class="ok">[✓] Application startup complete</div>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">T2 — Honeypot server</span></div>
+    <div class="terminal-body">
+      <div><span class="prompt">$</span> <span class="cmd">cd honeypot</span></div>
+      <div><span class="prompt">$</span> <span class="cmd">uvicorn app:app --host 0.0.0.0 --port 8001</span></div>
+      <div class="ok">[✓] Honeypot listening on :8001</div>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">T3 — ngrok tunnel</span></div>
+    <div class="terminal-body">
+      <div><span class="prompt">$</span> <span class="cmd">ngrok http 8000</span></div>
+      <div class="out">Forwarding  https://abc123.ngrok-free.app → localhost:8000</div>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">T4 — Real-time detector (show this to judges)</span></div>
+    <div class="terminal-body">
+      <div><span class="prompt">$</span> <span class="cmd">python backend/detect.py</span></div>
+      <div class="out">┌──────────────────┬───────┬──────────┬────────────┬────────┐</div>
+      <div class="out">│ IP               │ Req/s │ Login att│ IF Score   │ RF Pred│</div>
+      <div class="out">├──────────────────┼───────┼──────────┼────────────┼────────┤</div>
+      <div class="ok">│ 192.168.1.42     │  0.3  │    0     │  NORMAL    │ NORMAL │</div>
+      <div class="err">│ 203.45.12.99     │ 18.2  │   14     │  ATTACK ⚠  │ ATTACK │</div>
+      <div class="out">└──────────────────┴───────┴──────────┴────────────┴────────┘</div>
+    </div>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">T5 — Streamlit dashboard</span></div>
+    <div class="terminal-body">
+      <div><span class="prompt">$</span> <span class="cmd">streamlit run frontend/src/Dashboard.py</span></div>
+      <div class="out">Local URL:   http://localhost:8501</div>
+      <div class="out">Network URL: http://192.168.x.x:8501</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     LIVE REQUEST FLOW
+════════════════════════════════════════════ -->
+<div class="section" id="live">
+  <div class="section-label">05 · live flow</div>
+  <h2>Live Request Flow (with ngrok)</h2>
+
+  <div class="flow">
+    <div class="flow-row"><div class="flow-node fn-gray">Browser visits ngrok URL</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-row"><div class="flow-node fn-amber">tracker.js collects behavior silently</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-arrow-label">every 5 seconds</div>
+    <div class="flow-row"><div class="flow-node fn-blue">POST /api/score → ML scores session → action cached in Redis</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-row"><div class="flow-node fn-amber">Middleware reads Redis on every HTTP request</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-split">
+      <div class="flow-split-col">
+        <div class="flow-node fn-green">allow<small>normal response served</small></div>
+      </div>
+      <div class="flow-split-col">
+        <div class="flow-node fn-coral">suspicious<small>game CAPTCHA redirect</small></div>
+      </div>
+      <div class="flow-split-col">
+        <div class="flow-node fn-red">bot<small>honeypot redirect — attacker never knows</small></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     API REFERENCE
+════════════════════════════════════════════ -->
+<div class="section" id="api">
+  <div class="section-label">06 · api</div>
+  <h2>API Reference</h2>
+
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <div><div class="ep-path">/api/score</div><div class="ep-desc">Score a session's behavioral features. Returns action: allow / captcha / redirect + anomaly score.</div></div>
+  </div>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <div><div class="ep-path">/api/dashboard</div><div class="ep-desc">Returns last 100 events, flagged IPs list, and 30-minute traffic sparkline from Redis.</div></div>
+  </div>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <div><div class="ep-path">/api/captcha/pass</div><div class="ep-desc">Mark IP as verified human after CAPTCHA pass. Whitelists in Redis for 1 hour.</div></div>
+  </div>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <div><div class="ep-path">/api/captcha/fail</div><div class="ep-desc">Record CAPTCHA failure. Flags IP on 3rd failure and returns status: flagged.</div></div>
+  </div>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <div><div class="ep-path">/captcha/challenge</div><div class="ep-desc">Serve the Dino-run game CAPTCHA HTML page.</div></div>
+  </div>
+  <div class="endpoint">
+    <span class="method method-post">POST</span>
+    <div><div class="ep-path">/captcha/verify</div><div class="ep-desc">Verify game score + HMAC signature. Issues session token on pass.</div></div>
+  </div>
+  <div class="endpoint">
+    <span class="method method-get">GET</span>
+    <div><div class="ep-path">/captcha/new_game</div><div class="ep-desc">Issue a new game_id and HMAC secret_fragment for a fresh game session.</div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     FEATURE TABLE
+════════════════════════════════════════════ -->
+<div class="section" id="features">
+  <div class="section-label">07 · features</div>
+  <h2>Behavioral Feature Table</h2>
+  <p>Every session is scored on these 8 signals computed over a 10-second rolling window per IP.</p>
+  <table>
+    <thead>
+      <tr><th>Feature</th><th>Human range</th><th>Bot signature</th><th>Why it matters</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>click_count</td><td>3–20</td><td>50–300+</td><td>Bots click far more per window</td></tr>
+      <tr><td>avg_click_interval</td><td>400–2000ms</td><td>&lt;100ms</td><td>Inhuman speed is the clearest tell</td></tr>
+      <tr><td>click_interval_variance</td><td>50k–350k</td><td>&lt;200</td><td>Humans have natural timing jitter</td></tr>
+      <tr><td>click_interval_entropy</td><td>2.0–4.0 bits</td><td>&lt;0.5</td><td>Bot timing patterns have near-zero entropy</td></tr>
+      <tr><td>mouse_velocity_variance</td><td>0.2–1.5</td><td>~0</td><td>No mouse movement = no browser / mobile tap</td></tr>
+      <tr><td>max_element_click_rate</td><td>0.1–4.0/s</td><td>10–60/s</td><td>Hammering one endpoint is a DDoS signature</td></tr>
+      <tr><td>scroll_events</td><td>2–15</td><td>0 or 1000+</td><td>Real pages get scrolled; raw HTTP calls don't</td></tr>
+      <tr><td>keystroke_count</td><td>5–80</td><td>0 or uniform</td><td>Zero keys = no interaction; uniform = paste bot</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════
+     DEMO SCRIPT
+════════════════════════════════════════════ -->
+<div class="section" id="demo">
+  <div class="section-label">08 · demo</div>
+  <h2>Demo Script — For Judges</h2>
+  <p>Run this during the presentation. It fires a realistic bot signature at the live ngrok URL and shows the detection working in real time.</p>
+
+  <div class="terminal">
+    <div class="terminal-bar"><div class="dot dot-red"></div><div class="dot dot-amber"></div><div class="dot dot-green"></div><span class="terminal-title">simulate_bot_demo.py</span></div>
+    <div class="terminal-body">
+      <div><span class="out"># Paste your ngrok URL below then run: python simulate_bot_demo.py</span></div>
+      <div>&nbsp;</div>
+      <div><span class="kw">import</span> <span class="cmd">requests, time</span></div>
+      <div>&nbsp;</div>
+      <div><span class="fn">BASE</span> = <span class="str">"https://YOUR-NGROK-URL.ngrok-free.app"</span></div>
+      <div>&nbsp;</div>
+      <div><span class="fn">bot_payload</span> = {</div>
+      <div>&nbsp;&nbsp;<span class="str">"session_id"</span>: <span class="str">"demo-bot-001"</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"click_count"</span>: <span class="num">200</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"avg_click_interval"</span>: <span class="num">30</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"click_interval_variance"</span>: <span class="num">8</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"click_interval_entropy"</span>: <span class="num">0.02</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"mouse_velocity_variance"</span>: <span class="num">0</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"max_element_click_rate"</span>: <span class="num">40</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"scroll_events"</span>: <span class="num">0</span>,</div>
+      <div>&nbsp;&nbsp;<span class="str">"keystroke_count"</span>: <span class="num">0</span>,</div>
+      <div>}</div>
+      <div>&nbsp;</div>
+      <div><span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">10</span>):</div>
+      <div>&nbsp;&nbsp;r = <span class="fn">requests.post</span>(<span class="str">f"{BASE}/api/score"</span>, json=bot_payload)</div>
+      <div>&nbsp;&nbsp;<span class="fn">print</span>(r.json())</div>
+      <div>&nbsp;&nbsp;<span class="fn">time.sleep</span>(<span class="num">0.5</span>)</div>
+    </div>
+  </div>
+
+  <div class="note note-tip">
+    <span class="note-icon">→</span>
+    <span>Expected output: <code>{"action": "redirect", "score": 0.95, "label": "bot"}</code> — watch the detect.py terminal turn red simultaneously.</span>
+  </div>
+
+  <div style="margin-top:24px">
+    <div class="badge badge-teal" style="margin-right:8px">Talking point 1</div>
+    <p style="margin-top:8px">Most DDoS protection breaks the user experience. Our game CAPTCHA is fun — real users barely notice and often want to keep playing.</p>
+
+    <div class="badge badge-purple" style="margin-right:8px;margin-top:16px">Talking point 2</div>
+    <p style="margin-top:8px">We compute Shannon entropy of click intervals and mouse velocity variance — signals that are nearly impossible for bots to fake without a full browser simulation.</p>
+
+    <div class="badge badge-red" style="margin-right:8px;margin-top:16px">Talking point 3</div>
+    <p style="margin-top:8px">Confirmed bots are not blocked — they are trapped. The attacker believes they are still hitting the real system while every request they send is logged and their bandwidth is wasted on tar-pit delays.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════ -->
+<div class="footer">
+  <p>ML DDoS Shield · MIT License · Built for a hackathon</p>
+  <p style="margin-top:4px">Python · FastAPI · Flask · scikit-learn · Redis · React · ngrok · Streamlit</p>
+</div>
+
+</div>
+
+<script>
+function toggle(header) {
+  const phase = header.parentElement;
+  phase.classList.toggle('open');
+}
+
+// Stagger-animate phases on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.opacity = '1';
+      e.target.style.transform = 'none';
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.phase, .tool-card, .endpoint').forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(12px)';
+  el.style.transition = `opacity .4s ease ${i * 0.04}s, transform .4s ease ${i * 0.04}s`;
+  observer.observe(el);
+});
+</script>
+</body>
+</html>

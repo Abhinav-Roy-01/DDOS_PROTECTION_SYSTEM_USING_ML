@@ -1,0 +1,122 @@
+version: '3.9'
+
+services:
+  # --- DNS protocol layer ---
+  dns-resolver:
+    build:
+      context: .
+      dockerfile: INFRA/DOCKER/Dockerfile.resolver
+    ports:
+      - "53:53/udp"
+      - "853:853/tcp"
+    depends_on: [redis, timescaledb]
+    env_file: .env
+    restart: unless-stopped
+    cap_add: [NET_BIND_SERVICE]
+
+  doh-server:
+    build:
+      context: .
+      dockerfile: INFRA/DOCKER/Dockerfile.doh
+    ports:
+      - "443:443"
+    depends_on: [dns-resolver, redis]
+    env_file: .env
+    restart: unless-stopped
+
+  ml-engine:
+    build:
+      context: .
+      dockerfile: INFRA/DOCKER/Dockerfile.ml
+    depends_on: [redis, timescaledb]
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - ./ML/MODELS:/app/ML/MODELS
+
+  threat-intel:
+    build:
+      context: .
+      dockerfile: INFRA/DOCKER/Dockerfile.threatintel
+    depends_on: [redis]
+    env_file: .env
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: INFRA/DOCKER/Dockerfile.api
+    ports:
+      - "8000:8000"
+    depends_on: [redis, timescaledb, ml-engine]
+    env_file: .env
+    restart: unless-stopped
+
+  # --- HTTP layer (merged legacy behavioral shield — see HTTP-LAYER-SHIELD/CONSOLIDATION_LOG.md) ---
+  http-layer-shield:
+    build:
+      context: .
+      dockerfile: INFRA/DOCKER/Dockerfile.httpshield
+    ports:
+      - "8080:8080"
+    depends_on: [redis]
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - ./HTTP-LAYER-SHIELD/ML/MODELS:/app/ML/MODELS:ro
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: INFRA/DOCKER/Dockerfile.dashboard
+    ports:
+      - "3001:3001"
+    depends_on: [api]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: dnsshield
+      POSTGRES_USER: dnsadmin
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./SCRIPTS/MIGRATE:/docker-entrypoint-initdb.d
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./INFRA/PROMETHEUS/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./INFRA/GRAFANA/dashboards:/var/lib/grafana/dashboards
+    depends_on: [prometheus]
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./INFRA/NGINX/nginx.conf:/etc/nginx/nginx.conf
+    depends_on: [doh-server, api, dashboard, http-layer-shield]
+
+volumes:
+  redis_data:
+  timescale_data:

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Unified DDoS Protection System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/dashboard.css"/>
+</head>
+<body>
+
+<header>
+    <div class="logo">
+        <div class="logo-icon">⬡</div>
+        <div>
+            <div class="logo-name">AetherCept Unified</div>
+            <div class="logo-sub">ML + CAPTCHA + RATE LIMITING</div>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="status-badge">
+            <div class="status-dot live" id="statusDot"></div>
+            <span id="statusText">System Active</span>
+        </div>
+    </div>
+</header>
+
+<div class="summary-bar">
+    <div class="summary-cell">
+        <div class="val" id="s-total">0</div>
+        <div class="lbl">Total Requests</div>
+    </div>
+    <div class="summary-cell">
+        <div class="val" id="s-allowed">0</div>
+        <div class="lbl">Allowed (Human)</div>
+    </div>
+    <div class="summary-cell">
+        <div class="val warn" id="s-captcha">0</div>
+        <div class="lbl">Sent to CAPTCHA</div>
+    </div>
+    <div class="summary-cell">
+        <div class="val danger" id="s-blocked">0</div>
+        <div class="lbl">Blocked (Bot/Limits)</div>
+    </div>
+    <div class="summary-cell">
+        <div class="val purple" id="s-banned">0</div>
+        <div class="lbl">Banned IPs</div>
+    </div>
+    <div class="summary-cell">
+        <div class="val info" id="s-rps">0</div>
+        <div class="lbl">Req / sec</div>
+    </div>
+</div>
+
+<div class="main-grid">
+
+    <!-- Timeline & Matrix -->
+    <div class="col">
+        <div class="panel">
+            <div class="panel-title">📉 Request Timeline (60s)</div>
+            <div class="timeline-wrap" id="timeline"></div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-title">🌐 IP Threat Matrix</div>
+            <table class="matrix-table">
+                <thead>
+                    <tr><th>IP</th><th>Total</th><th>Blocked</th><th>Threat</th><th>Action</th></tr>
+                </thead>
+                <tbody id="ip-matrix-body">
+                    <tr><td colspan="5">Waiting for traffic...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">⚡ Live Session Feed (ML Verification)</div>
+            <div class="feed-wrap" id="live-feed">
+                <!-- Data goes here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual ML & Actions -->
+    <div class="col">
+        <div class="panel">
+            <div class="panel-title">🧠 Manual Classifier</div>
+            <div class="form-grid">
+                <div class="field">
+                    <label>Click Count</label>
+                    <input type="number" id="f_click_count" value="5">
+                </div>
+                <div class="field">
+                    <label>Avg Interval (ms)</label>
+                    <input type="number" id="f_avg_interval" value="1200">
+                </div>
+                <div class="field">
+                    <label>Interval Variance</label>
+                    <input type="number" id="f_interval_var" value="200000">
+                </div>
+                <div class="field">
+                    <label>Entropy</label>
+                    <input type="number" id="f_entropy" value="3.0">
+                </div>
+                <div class="field">
+                    <label>Mouse Vel. Var.</label>
+                    <input type="number" id="f_mouse_vel" value="0.55">
+                </div>
+                <div class="field">
+                    <label>Max Click Rate</label>
+                    <input type="number" id="f_click_rate" value="1.0">
+                </div>
+                <div class="field">
+                    <label>Scroll Events</label>
+                    <input type="number" id="f_scroll" value="10">
+                </div>
+                <div class="field">
+                    <label>Keystrokes</label>
+                    <input type="number" id="f_keystrokes" value="8">
+                </div>
+                <button onclick="runClassifier()" style="grid-column: span 2;">Analyze Features</button>
+            </div>
+            <div class="result-box" id="resultBox">
+                <h4>VERDICT: <span id="manualVerdict">—</span></h4>
+                <p>Anomaly Score: <span id="manualScore">—</span></p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">🛡 Attack Simulator</div>
+            <p style="font-size: 0.8rem; color: var(--dim); margin-bottom: 1rem;">Launch a simulated DDoS attack to test ML and rate-limiting rules.</p>
+            <button onclick="simulateAttack('flood')" class="btn-danger">Launch Flood Attack</button>
+            <button onclick="simulateAttack('slowloris')" class="btn-warn">Launch Slowloris</button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
