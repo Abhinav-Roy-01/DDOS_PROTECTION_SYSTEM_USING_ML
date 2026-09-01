@@ -38,8 +38,17 @@ def limiter_and_ban_check():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
     path = request.path
     
-    # Exclude static/captcha paths to prevent loops
-    if path.startswith("/static") or path.startswith("/captcha") or path.startswith("/matrix"):
+        # Exclude static/captcha paths (avoid loops) and every dashboard-facing
+    # control/read endpoint under /api/, plus /stats and /health.
+    # These are operator-facing, not visitor-facing content routes -- if the
+    # dashboard's OWN ip ever gets captcha-flagged (e.g. from testing /predict
+    # with bot-like values), the dashboard itself must stay reachable so you
+    # can see what happened and solve the challenge, rather than going dark.
+    # /health specifically must never be gated: a Docker/K8s liveness probe
+    # hitting it would see failures and could restart the container in a loop.
+    if (path.startswith("/static") or path.startswith("/captcha")
+            or path.startswith("/matrix") or path.startswith("/api/")
+            or path == "/stats" or path == "/health"):
         return
 
     if is_banned(ip):
