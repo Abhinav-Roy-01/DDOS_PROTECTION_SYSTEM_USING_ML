@@ -1,4 +1,4 @@
-# DNS Shield
+# DDOS PROTECTION SYSTEM USING ML
 
 DNS Filtering Service using Threat Intelligence and ML — SIH problem
 statement, organizational-grade implementation.
