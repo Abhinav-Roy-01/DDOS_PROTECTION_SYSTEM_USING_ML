@@ -1,0 +1,8 @@
+openapi: 3.1.0
+info:
+  title: DNS Shield API
+  version: 0.1.0
+paths:
+  /api/v1/dns/score: { post: { summary: Score a domain for maliciousness } }
+  /api/v1/threats/domains: { get: { summary: List all blocked domains } }
+  /api/v1/analysis/pcap: { post: { summary: Upload PCAP for passive analysis } }

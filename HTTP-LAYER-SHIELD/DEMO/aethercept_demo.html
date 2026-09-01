@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AetherCept — Bot Detection System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080c10;
+  --surface: #0e1419;
+  --surface2: #141c24;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #00e5a0;
+  --accent2: #00b87a;
+  --danger: #ff4d6d;
+  --danger2: #c9184a;
+  --amber: #ffb703;
+  --text: #e8edf2;
+  --muted: #5a6a7a;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* grid bg */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* HEADER */
+header{
+  position:relative;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:20px 32px;
+  border-bottom:1px solid var(--border);
+  background:rgba(8,12,16,0.9);
+  backdrop-filter:blur(12px);
+}
+.logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.logo-icon{
+  width:32px;height:32px;
+  border:1.5px solid var(--accent);
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  overflow:hidden;
+}
+.logo-icon::before{
+  content:'';
+  position:absolute;
+  width:16px;height:16px;
+  background:var(--accent);
+  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+  opacity:0.8;
+  animation:spin 4s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.logo-name{font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--text);}
+.logo-name span{color:var(--accent);}
+.header-right{display:flex;align-items:center;gap:16px;}
+.live-badge{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:11px;color:var(--accent);
+  background:rgba(0,229,160,0.08);
+  border:1px solid rgba(0,229,160,0.2);
+  padding:5px 12px;border-radius:100px;
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1.2s ease infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.api-url{
+  font-family:var(--mono);font-size:10px;color:var(--muted);
+  background:var(--surface);border:1px solid var(--border);
+  padding:5px 12px;border-radius:6px;
+  max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* MAIN LAYOUT */
+main{
+  position:relative;z-index:1;
+  padding:24px 32px;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  grid-template-rows:auto auto auto;
+  gap:16px;
+}
+
+/* CARDS */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,229,160,0.3),transparent);
+}
+.card-label{
+  font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;
+}
+.card-value{
+  font-size:28px;font-weight:800;color:var(--text);
+  font-family:var(--mono);
+  letter-spacing:-0.02em;
+}
+.card-sub{font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--mono);}
+
+/* STATUS BANNER */
+.status-banner{
+  grid-column:1 / -1;
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;border-radius:10px;
+  font-size:13px;font-weight:600;letter-spacing:0.02em;
+  transition:all 0.4s ease;
+  border:1px solid;
+}
+.status-safe{background:rgba(0,229,160,0.06);border-color:rgba(0,229,160,0.2);color:var(--accent);}
+.status-bot{background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.3);color:var(--danger);animation:alertpulse 1s ease infinite;}
+@keyframes alertpulse{0%,100%{background:rgba(255,77,109,0.08);}50%{background:rgba(255,77,109,0.15);}}
+.status-icon{font-size:18px;}
+.status-right{margin-left:auto;font-family:var(--mono);font-size:11px;opacity:0.7;}
+
+/* CHART CARD */
+.chart-card{grid-column:1 / 3;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.chart-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,160,0.3),transparent);}
+.chart-title{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+
+/* THREAT LOG */
+.log-card{grid-column:3 / 4;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.log-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,160,0.3),transparent);}
+.log-title{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.log-body{height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.log-body::-webkit-scrollbar{width:3px;}
+.log-body::-webkit-scrollbar-track{background:transparent;}
+.log-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.log-entry{
+  font-family:var(--mono);font-size:10px;line-height:1.6;
+  padding:4px 8px;border-radius:4px;
+  border-left:2px solid;
+}
+.log-human{color:rgba(0,229,160,0.7);border-color:var(--accent);background:rgba(0,229,160,0.04);}
+.log-bot{color:rgba(255,77,109,0.9);border-color:var(--danger);background:rgba(255,77,109,0.06);font-weight:700;}
+.log-sys{color:var(--muted);border-color:var(--border2);background:transparent;}
+
+/* FEATURE RADAR / TABLE */
+.features-card{grid-column:1 / 3;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.features-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,160,0.3),transparent);}
+
+.feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;}
+.feat-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.feat-name{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:6px;}
+.feat-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text);}
+.feat-bar-wrap{margin-top:6px;height:3px;background:var(--surface);border-radius:2px;overflow:hidden;}
+.feat-bar{height:100%;border-radius:2px;transition:width 0.5s ease,background 0.4s ease;}
+
+/* PREDICTION PANEL */
+.predict-card{grid-column:3 / 4;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.predict-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,160,0.3),transparent);}
+
+.verdict-display{
+  margin:16px 0;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+  padding:20px;border-radius:10px;
+  border:1px solid var(--border2);
+  background:var(--surface2);
+  transition:all 0.4s ease;
+}
+.verdict-label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+.verdict-value{font-size:32px;font-weight:800;font-family:var(--mono);letter-spacing:-0.02em;transition:color 0.4s;}
+.verdict-score{font-size:11px;font-family:var(--mono);color:var(--muted);}
+.verdict-human{color:var(--accent);}
+.verdict-bot{color:var(--danger);}
+
+.sim-btns{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.btn{
+  width:100%;padding:10px;border-radius:8px;
+  font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:0.05em;
+  border:1px solid;cursor:pointer;transition:all 0.2s ease;
+  text-transform:uppercase;
+}
+.btn:active{transform:scale(0.98);}
+.btn-human{background:rgba(0,229,160,0.08);border-color:rgba(0,229,160,0.3);color:var(--accent);}
+.btn-human:hover{background:rgba(0,229,160,0.15);}
+.btn-bot{background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.3);color:var(--danger);}
+.btn-bot:hover{background:rgba(255,77,109,0.15);}
+.btn-live{background:rgba(255,183,3,0.08);border-color:rgba(255,183,3,0.3);color:var(--amber);}
+.btn-live:hover{background:rgba(255,183,3,0.15);}
+
+/* METRICS ROW */
+.metrics-row{grid-column:1 / -1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+
+/* ANOMALY SCORE BAR */
+.score-track{
+  margin:10px 0 4px;
+  height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;
+  position:relative;
+}
+.score-fill{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--danger),var(--accent));
+  transition:width 0.5s ease;
+}
+.score-marker{
+  position:absolute;top:-3px;
+  width:2px;height:12px;background:#fff;opacity:0.3;border-radius:1px;
+  transform:translateX(-50%);
+}
+
+/* FOOTER */
+footer{
+  position:relative;z-index:1;
+  border-top:1px solid var(--border);
+  padding:12px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;font-family:var(--mono);color:var(--muted);
+}
+
+/* responsive */
+@media(max-width:900px){
+  main{grid-template-columns:1fr 1fr;padding:16px;}
+  .chart-card,.features-card{grid-column:1 / -1;}
+  .log-card,.predict-card{grid-column:1 / -1;}
+  .metrics-row{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <div class="logo-name">Aether<span>Cept</span></div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="api-url" id="apiUrlDisplay">API: not connected — paste ngrok URL below</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- STATUS BANNER -->
+  <div class="status-banner status-safe" id="statusBanner">
+    <span class="status-icon">🛡️</span>
+    <span id="statusText">System active — monitoring behavioral patterns</span>
+    <span class="status-right" id="statusTime"></span>
+  </div>
+
+  <!-- METRIC CARDS -->
+  <div class="metrics-row">
+    <div class="card">
+      <div class="card-label">Sessions analyzed</div>
+      <div class="card-value" id="mSessions">0</div>
+      <div class="card-sub">this session</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Bots blocked</div>
+      <div class="card-value" id="mBots" style="color:var(--danger)">0</div>
+      <div class="card-sub">detected &amp; flagged</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Humans passed</div>
+      <div class="card-value" id="mHumans" style="color:var(--accent)">0</div>
+      <div class="card-sub">legitimate users</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Model accuracy</div>
+      <div class="card-value">97.2%</div>
+      <div class="card-sub">isolation forest</div>
+    </div>
+  </div>
+
+  <!-- TRAFFIC CHART -->
+  <div class="chart-card">
+    <div class="chart-title">Anomaly score — live stream</div>
+    <div style="position:relative;height:190px;">
+      <canvas id="mainChart"></canvas>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-card">
+    <div class="log-title">Event log</div>
+    <div class="log-body" id="logBody">
+      <div class="log-entry log-sys">[system] AetherCept initialized</div>
+      <div class="log-entry log-sys">[system] Isolation Forest model loaded</div>
+      <div class="log-entry log-sys">[system] Awaiting behavioral signals...</div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="features-card">
+    <div class="card-label">Behavioral feature analysis — current session</div>
+    <div class="feat-grid" id="featGrid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- PREDICTION PANEL -->
+  <div class="predict-card">
+    <div class="card-label">ML prediction</div>
+
+    <div class="verdict-display" id="verdictDisplay">
+      <div class="verdict-label">verdict</div>
+      <div class="verdict-value verdict-human" id="verdictVal">—</div>
+      <div class="verdict-score" id="verdictScore">anomaly score: —</div>
+    </div>
+
+    <div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:4px;">
+        <span>BOT</span><span>anomaly score</span><span>HUMAN</span>
+      </div>
+      <div class="score-track">
+        <div class="score-fill" id="scoreFill" style="width:50%;"></div>
+        <div class="score-marker" id="scoreMarker" style="left:50%"></div>
+      </div>
+    </div>
+
+    <div class="sim-btns">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:2px;">Simulate &amp; predict</div>
+      <button class="btn btn-human" onclick="simulate('human')">▶ Human user</button>
+      <button class="btn btn-bot" onclick="simulate('bot')">▶ HTTP flood bot</button>
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin:6px 0 2px;">Live API</div>
+      <input id="ngrokInput" placeholder="Paste ngrok URL (https://xxx.ngrok-free.dev)"
+        style="width:100%;padding:8px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:11px;font-family:var(--mono);outline:none;">
+      <button class="btn btn-live" onclick="pingAPI()">⚡ Call real API</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <span>AetherCept · Behavioral DDoS Detection System · Isolation Forest + StandardScaler</span>
+  <span id="footerTime"></span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const FEATURES = ['click_count','avg_click_interval','click_interval_variance',
+  'click_interval_entropy','mouse_velocity_variance','max_element_click_rate',
+  'scroll_events','keystroke_count'];
+
+const FEAT_LABELS = ['Clicks','Avg interval','Interval var','Entropy',
+  'Mouse vel','Max click rate','Scrolls','Keystrokes'];
+
+const FEAT_MAX = [300, 2300, 440000, 4.3, 1.7, 60, 22, 65];
+
+let sessions=0, bots=0, humans=0;
+let lastVerdict = null;
+const scoreHistory = Array(60).fill(0.5);
+
+// Bot/Human profile presets
+const profiles = {
+  human: {
+    click_count: ()=>rand(4,20),
+    avg_click_interval: ()=>rand(500,2000),
+    click_interval_variance: ()=>rand(80000,350000),
+    click_interval_entropy: ()=>rand(2.0,4.0),
+    mouse_velocity_variance: ()=>rand(0.2,1.4),
+    max_element_click_rate: ()=>rand(0.5,3.0),
+    scroll_events: ()=>rand(3,18),
+    keystroke_count: ()=>rand(10,65),
+  },
+  bot: {
+    click_count: ()=>rand(80,299),
+    avg_click_interval: ()=>rand(0,200),
+    click_interval_variance: ()=>rand(0,5000),
+    click_interval_entropy: ()=>rand(0,0.5),
+    mouse_velocity_variance: ()=>rand(0,0.02),
+    max_element_click_rate: ()=>rand(20,60),
+    scroll_events: ()=>rand(0,1),
+    keystroke_count: ()=>rand(0,5),
+  }
+};
+
+function rand(a,b){return parseFloat((Math.random()*(b-a)+a).toFixed(2));}
+
+// ── Chart ──────────────────────────────────────────────────────────────────
+const ctx = document.getElementById('mainChart').getContext('2d');
+const mainChart = new Chart(ctx,{
+  type:'line',
+  data:{
+    labels:Array(60).fill(''),
+    datasets:[{
+      data:[...scoreHistory],
+      borderColor:'#00e5a0',
+      borderWidth:1.5,
+      pointRadius:0,
+      fill:true,
+      backgroundColor:'rgba(0,229,160,0.05)',
+      tension:0.4
+    }]
+  },
+  options:{
+    responsive:true,
+    maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},
+    scales:{
+      x:{display:false},
+      y:{min:0,max:1,display:true,
+        ticks:{color:'#5a6a7a',font:{size:9},callback:v=>v.toFixed(1)},
+        grid:{color:'rgba(255,255,255,0.04)'},
+        border:{display:false}
+      }
+    },
+    animation:{duration:300}
+  }
+});
+
+// ── Feature Grid ───────────────────────────────────────────────────────────
+function renderFeatures(vals, type){
+  const grid = document.getElementById('featGrid');
+  grid.innerHTML = FEATURES.map((f,i)=>{
+    const v = vals ? vals[f] : null;
+    const pct = v !== null ? Math.min(100, (v / FEAT_MAX[i]) * 100).toFixed(0) : 0;
+    const color = type === 'bot' ? 'var(--danger)' : type === 'human' ? 'var(--accent)' : 'var(--muted)';
+    const disp = v !== null ? (v > 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(1)) : '—';
+    return `<div class="feat-item">
+      <div class="feat-name">${FEAT_LABELS[i]}</div>
+      <div class="feat-val" style="color:${color}">${disp}</div>
+      <div class="feat-bar-wrap">
+        <div class="feat-bar" style="width:${pct}%;background:${color};"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+renderFeatures(null, null);
+
+// ── Prediction logic (local mock when no API) ─────────────────────────────
+function localPredict(vals){
+  // Mimic Isolation Forest logic based on feature signatures
+  const botScore =
+    (vals.click_count > 50 ? 0.3 : 0) +
+    (vals.avg_click_interval < 200 ? 0.3 : 0) +
+    (vals.click_interval_entropy < 0.5 ? 0.2 : 0) +
+    (vals.mouse_velocity_variance < 0.01 ? 0.15 : 0) +
+    (vals.max_element_click_rate > 15 ? 0.15 : 0) +
+    (vals.scroll_events < 1 ? 0.1 : 0);
+
+  const isBot = botScore > 0.4;
+  // anomaly score: negative = bot in Isolation Forest; we map to 0–1 for display
+  // negative anomaly = bot, positive = human; we map: score=0 → bot, score=1 → human
+  const anomalyRaw = isBot ? -(botScore * 0.5) : (0.1 + Math.random()*0.2);
+  return {prediction: isBot ? 'bot' : 'human', anomaly_score: parseFloat(anomalyRaw.toFixed(4))};
+}
+
+function applyResult(result, vals, type){
+  sessions++;
+  document.getElementById('mSessions').textContent = sessions;
+
+  const isBot = result.prediction === 'bot';
+  if(isBot){ bots++; document.getElementById('mBots').textContent = bots; }
+  else { humans++; document.getElementById('mHumans').textContent = humans; }
+
+  // anomaly_score: in IF, negative = anomaly (bot). Map to 0-1 display: 0=bot, 1=human
+  const raw = result.anomaly_score;
+  // typical IF range: -0.5 (very bot) to +0.3 (very human)
+  const normalized = Math.min(1, Math.max(0, (raw + 0.5) / 0.8));
+
+  // chart update
+  scoreHistory.push(normalized);
+  scoreHistory.shift();
+  mainChart.data.datasets[0].data = [...scoreHistory];
+  mainChart.data.datasets[0].borderColor = isBot ? '#ff4d6d' : '#00e5a0';
+  mainChart.data.datasets[0].backgroundColor = isBot ? 'rgba(255,77,109,0.05)' : 'rgba(0,229,160,0.05)';
+  mainChart.update();
+
+  // verdict
+  const vv = document.getElementById('verdictVal');
+  vv.textContent = result.prediction.toUpperCase();
+  vv.className = 'verdict-value ' + (isBot ? 'verdict-bot' : 'verdict-human');
+  document.getElementById('verdictScore').textContent = `anomaly score: ${raw}`;
+
+  // score bar
+  const pct = (normalized*100).toFixed(0);
+  document.getElementById('scoreFill').style.width = pct + '%';
+  document.getElementById('scoreMarker').style.left = pct + '%';
+
+  // status
+  const banner = document.getElementById('statusBanner');
+  const stxt = document.getElementById('statusText');
+  if(isBot){
+    banner.className='status-banner status-bot';
+    stxt.textContent = `⚠ BOT DETECTED — HTTP flood pattern matched · session blocked`;
+  } else {
+    banner.className='status-banner status-safe';
+    stxt.textContent = `✓ Human verified — behavioral signature normal`;
+  }
+  document.getElementById('statusTime').textContent = new Date().toLocaleTimeString();
+
+  // features
+  renderFeatures(vals, result.prediction);
+
+  // log
+  addLog(isBot
+    ? `[BLOCKED] bot pattern · score:${raw} · clicks:${vals.click_count} · rate:${vals.max_element_click_rate}`
+    : `[ALLOWED] human verified · score:${raw} · entropy:${vals.click_interval_entropy}`,
+    isBot ? 'bot' : 'human');
+}
+
+function addLog(msg, type='sys'){
+  const body = document.getElementById('logBody');
+  const el = document.createElement('div');
+  el.className = 'log-entry log-' + type;
+  el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  body.prepend(el);
+  if(body.children.length > 40) body.lastChild.remove();
+}
+
+// ── Simulate ───────────────────────────────────────────────────────────────
+function simulate(type){
+  const p = profiles[type];
+  const vals = {};
+  FEATURES.forEach(f => { vals[f] = p[f](); });
+
+  const ngrok = document.getElementById('ngrokInput').value.trim();
+  if(ngrok){
+    callAPI(ngrok, vals).then(result => {
+      if(result) applyResult(result, vals, type);
+      else { const r = localPredict(vals); applyResult(r, vals, type); }
+    });
+  } else {
+    const result = localPredict(vals);
+    applyResult(result, vals, type);
+  }
+}
+
+// ── Real API call ──────────────────────────────────────────────────────────
+async function callAPI(baseUrl, vals){
+  try{
+    const url = baseUrl.replace(/\/$/, '') + '/predict';
+    const res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(vals)
+    });
+    const data = await res.json();
+    document.getElementById('apiUrlDisplay').textContent = 'API: ' + baseUrl;
+    addLog(`[API] called ${url} → ${data.prediction}`, data.prediction === 'bot' ? 'bot' : 'human');
+    return data;
+  } catch(e){
+    addLog(`[API] error: ${e.message} — using local model`, 'sys');
+    return null;
+  }
+}
+
+async function pingAPI(){
+  const ngrok = document.getElementById('ngrokInput').value.trim();
+  if(!ngrok){ addLog('[API] no URL provided','sys'); return; }
+  // Send a random human sample
+  const vals = {};
+  FEATURES.forEach((f,i) => { vals[f] = profiles.human[f](); });
+  const result = await callAPI(ngrok, vals);
+  if(result) applyResult(result, vals, 'human');
+}
+
+// ── Auto demo ticker ───────────────────────────────────────────────────────
+let autoCount = 0;
+function autoTick(){
+  autoCount++;
+  // Mostly humans, occasional bot burst to demo detection
+  const type = (autoCount % 8 === 0) ? 'bot' : 'human';
+  const p = profiles[type];
+  const vals = {};
+  FEATURES.forEach(f => { vals[f] = p[f](); });
+  const result = localPredict(vals);
+  applyResult(result, vals, type);
+}
+
+// Start auto demo
+setInterval(autoTick, 2000);
+
+// Clock
+function updateClock(){
+  const now = new Date().toLocaleTimeString();
+  document.getElementById('statusTime').textContent = now;
+  document.getElementById('footerTime').textContent = now;
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+</body>
+</html>

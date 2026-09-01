@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-shield-resolver
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: dns-resolver } }
+  template:
+    spec:
+      containers:
+        - name: dns-resolver
+          image: dns-shield/resolver:latest
+          resources:
+            requests: { cpu: "250m", memory: "256Mi" }
+            limits:   { cpu: "500m", memory: "512Mi" }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: dns-resolver-hpa }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: dns-shield-resolver }
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 60 } }

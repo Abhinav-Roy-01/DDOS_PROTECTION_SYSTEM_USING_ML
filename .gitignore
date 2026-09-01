@@ -1,0 +1,20 @@
+.env
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+
+# DNS-layer model (to be trained)
+ML/MODELS/dns_model.pkl
+ML/DATASET/training_data.csv
+ML/DATASET/human_only.csv
+
+# HTTP-layer shield already ships a trained model — do NOT ignore its .pkl files
+!HTTP-LAYER-SHIELD/ML/MODELS/*.pkl
+
+INFRA/NGINX/certs/

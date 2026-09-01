@@ -1,0 +1,43 @@
+============================================================
+DATASET SUMMARY
+============================================================
+Total sessions   : 4750
+Human sessions   : 3750
+Bot sessions     : 1000
+
+Breakdown by persona:
+  casual_browser            1250
+  power_user                1250
+  mobile_user               1250
+  http_flooder              250
+  credential_stuffer        250
+  slow_bot                  250
+  headless_browser          250
+
+Feature statistics (human vs bot):
+------------------------------------------------------------
+click_count
+  human: mean=10.0  std=6.6  min=0.0  max=31.0
+  bot  : mean=55.6  std=87.4  min=0.0  max=299.0
+avg_click_interval
+  human: mean=894.9  std=406.7  min=0.0  max=2258.7
+  bot  : mean=589.9  std=448.0  min=22.3  max=1120.5
+click_interval_variance
+  human: mean=160568.5  std=66956.6  min=0.0  max=436416.8
+  bot  : mean=153.8  std=162.5  min=2.9  max=491.8
+click_interval_entropy
+  human: mean=2.7  std=0.5  min=0.9  max=4.3
+  bot  : mean=0.2  std=0.3  min=0.0  max=0.9
+mouse_velocity_variance
+  human: mean=0.5  std=0.4  min=0.0  max=1.7
+  bot  : mean=0.0  std=0.0  min=0.0  max=0.0
+max_element_click_rate
+  human: mean=1.5  std=1.0  min=0.1  max=4.0
+  bot  : mean=11.6  std=17.7  min=0.4  max=60.0
+scroll_events
+  human: mean=5.7  std=3.8  min=0.0  max=22.0
+  bot  : mean=0.2  std=0.7  min=0.0  max=4.0
+keystroke_count
+  human: mean=21.8  std=17.4  min=0.0  max=65.0
+  bot  : mean=9.5  std=16.6  min=0.0  max=42.4
+============================================================
