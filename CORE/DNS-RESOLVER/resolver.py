@@ -2,14 +2,14 @@
 DNS-RESOLVER/resolver.py
 Async UDP DNS resolver.
 
-Build order for this file (Phase 1 — this is step 1 of 1 for now):
-  1. Receive raw UDP packet -> parse with dnspython
-  2. Check blacklist (stub set() below -- real feeds land here in Phase 3)
-  3. Blocked?  -> build NXDOMAIN, send back immediately
-  4. Allowed?  -> forward to upstream resolver, relay the real answer back
+Build order for this file:
+  1. Receive raw UDP packet -> parse with dnspython               (done)
+  2. Check Redis cache -- skip upstream entirely on a hit         (done, this step)
+  3. Check blacklist (stub set() below -- real feeds land here in Phase 3)
+  4. Blocked?  -> build NXDOMAIN, send back immediately
+  5. Allowed?  -> forward to upstream resolver, cache the answer, relay it back
 
 NOT yet wired in (later phases, don't build yet):
-  - Redis cache check before the blacklist check      (Phase 1, next file)
   - ML anomaly scoring on the domain name              (Phase 4)
   - STIX/TAXII + real blacklist feeds                  (Phase 3)
   - DNS tunnelling detection                            (Phase 5)
@@ -17,23 +17,32 @@ NOT yet wired in (later phases, don't build yet):
 Run locally (no root needed on port 5353):
   python resolver.py
 Test from another terminal:
-  dig @127.0.0.1 -p 5353 google.com
-  dig @127.0.0.1 -p 5353 blocked-test.com   <- should return NXDOMAIN
+  dig @127.0.0.1 -p 5353 google.com          <- first call: cache MISS
+  dig @127.0.0.1 -p 5353 google.com          <- second call: cache HIT, much faster
+  dig @127.0.0.1 -p 5353 blocked-test.com    <- should return NXDOMAIN
 """
 
 import asyncio
 import logging
+import os
+import sys
 
 import dns.message
 import dns.rcode
 import dns.asyncquery
+import dns.rdatatype
+
+# dns_cache.py lives in ../CACHE/ -- add it to sys.path the same way we did
+# for CAPTCHA/ and DASHBOARD/ in the HTTP-layer server.py
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "CACHE"))
+import dns_cache
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger("dns-resolver")
 
 # --- config -----------------------------------------------------------
 LISTEN_HOST = "0.0.0.0"
-LISTEN_PORT = 5353          # switch to 53 later, inside the Docker container
+LISTEN_PORT = 15353          # switch to 53 later, inside the Docker container
 UPSTREAM_IP = "8.8.8.8"
 UPSTREAM_PORT = 53
 UPSTREAM_TIMEOUT = 2.0       # seconds
@@ -82,20 +91,38 @@ class UDPResolverProtocol(asyncio.DatagramProtocol):
         qtype = dns.rdatatype.to_text(query.question[0].rdtype)
         log.info(f"{addr[0]:15s}  {domain:35s}  {qtype}")
 
-        # --- step 1: blacklist check (stub for now) ---
+        # --- step 1: cache check -- skip everything else on a hit ---
+        cached = dns_cache.get_cached_response(domain, qtype)
+        if cached is not None:
+            # DNS responses MUST echo the query's own ID (RFC 1035) --
+            # a client rejects a response whose ID doesn't match what it
+            # sent, and each client query uses a fresh random ID (this is
+            # also part of what prevents cache-poisoning/spoofing). The
+            # cached bytes carry whatever ID the ORIGINAL upstream request
+            # used, so we patch just those first 2 bytes to match THIS
+            # query before replaying -- found via actual testing, not
+            # something that would've been obvious from reading the code.
+            patched = query.id.to_bytes(2, "big") + cached[2:]
+            self.transport.sendto(patched, addr)
+            log.info(f"  -> CACHE HIT  {domain}")
+            return
+
+        # --- step 2: blacklist check (stub for now) ---
         if is_blocked(domain):
             log.info(f"  -> BLOCKED  {domain}")
             response = build_nxdomain_response(query)
             self.transport.sendto(response.to_wire(), addr)
             return
 
-        # --- step 2: forward upstream, relay the real answer back ---
+        # --- step 3: forward upstream, cache the answer, relay it back ---
         try:
             reply, _ = await dns.asyncquery.udp_with_fallback(
                 query, UPSTREAM_IP, port=UPSTREAM_PORT, timeout=UPSTREAM_TIMEOUT
             )
-            self.transport.sendto(reply.to_wire(), addr)
-            log.info(f"  -> ALLOWED  {domain}  ({len(reply.answer)} record(s))")
+            wire = reply.to_wire()
+            self.transport.sendto(wire, addr)
+            dns_cache.store_response(domain, qtype, wire, dns_cache.extract_min_ttl(reply))
+            log.info(f"  -> ALLOWED  {domain}  ({len(reply.answer)} record(s), cached)")
         except Exception as e:
             log.error(f"  -> upstream failure for {domain}: {e}")
 

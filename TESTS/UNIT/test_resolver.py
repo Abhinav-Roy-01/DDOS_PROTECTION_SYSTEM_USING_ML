@@ -6,7 +6,7 @@ What's NOT tested here (needs a running process + real UDP socket,
 can't be a clean unit test): the actual asyncio UDP server loop and
 upstream forwarding. Verify that manually with:
     python CORE/DNS-RESOLVER/resolver.py
-    dig @127.0.0.1 -p 5353 google.com
+    dig @127.0.0.1 -p 15353 google.com
 
 Run:
     pytest TESTS/UNIT/test_resolver.py -v
