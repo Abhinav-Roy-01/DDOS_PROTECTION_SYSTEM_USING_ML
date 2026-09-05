@@ -70,7 +70,7 @@ function renderFeed(reqs) {
 async function banIP(ip) {
     await fetch('/api/ban', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_API_KEY},
         body: JSON.stringify({ip})
     });
     poll();
@@ -101,20 +101,25 @@ async function runClassifier() {
 async function startAttack(type) {
     const res = await fetch('/api/attack/start', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_API_KEY},
         body: JSON.stringify({type})
     });
     renderAttackStatus(await res.json());
 }
 
 async function stopAttack() {
-    const res = await fetch('/api/attack/stop', { method: 'POST' });
+    const res = await fetch('/api/attack/stop', {
+        method: 'POST',
+        headers: {'X-Admin-Key': ADMIN_API_KEY}
+    });
     renderAttackStatus(await res.json());
 }
 
 async function pollAttackStatus() {
     try {
-        const res = await fetch('/api/attack/status');
+        const res = await fetch('/api/attack/status', {
+            headers: {'X-Admin-Key': ADMIN_API_KEY}
+        });
         renderAttackStatus(await res.json());
     } catch (e) {
         console.error("Attack status polling error", e);
@@ -130,7 +135,9 @@ function renderAttackStatus(s) {
 
 async function pollTelemetry() {
     try {
-        const res = await fetch('/api/telemetry');
+        const res = await fetch('/api/telemetry', {
+            headers: {'X-Admin-Key': ADMIN_API_KEY}
+        });
         renderTelemetry(await res.json());
     } catch (e) {
         console.error("Telemetry polling error", e);

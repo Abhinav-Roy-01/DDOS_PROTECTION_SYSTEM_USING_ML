@@ -6,18 +6,28 @@ from rate_limiter import (
     get_stats, get_matrix, manual_ban, record_click, get_click_feed
 )
 import attack_simulator
+from auth import require_admin_key, get_admin_key
 import time
 import os
+import os as _os
+import sys as _sys
+
+# captcha_routes.py lives in ../CAPTCHA/ after the CAPS reorganization
+# (it used to sit next to server.py, so a plain "from captcha_routes import"
+# used to work). Same class of bug as the ML model path and the
+# templates/static path -- add CAPTCHA/ to sys.path before importing.
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "CAPTCHA"))
 
 try:
     from captcha_routes import captcha_bp, get_redis
-except:
-    pass
+except Exception as e:
+    # Was a bare "except: pass" before -- that's exactly why this bug
+    # went unnoticed. Now it prints the real reason if it ever breaks again.
+    print("Warning: Could not import captcha_routes:", e)
 
 # templates/ and static/ live in ../DASHBOARD/ after the CAPS reorganization
 # (they used to sit next to server.py) -- pointed here instead of moving
 # them back, so DASHBOARD/ stays the single home for all frontend assets.
-import os as _os
 _api_dir = _os.path.dirname(_os.path.abspath(__file__))
 _dashboard_dir = _os.path.join(_api_dir, "..", "DASHBOARD")
 
@@ -38,7 +48,7 @@ def limiter_and_ban_check():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
     path = request.path
     
-        # Exclude static/captcha paths (avoid loops) and every dashboard-facing
+    # Exclude static/captcha paths (avoid loops) and every dashboard-facing
     # control/read endpoint under /api/, plus /stats and /health.
     # These are operator-facing, not visitor-facing content routes -- if the
     # dashboard's OWN ip ever gets captcha-flagged (e.g. from testing /predict
@@ -73,7 +83,9 @@ def limiter_and_ban_check():
 def dashboard():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
     record_request(ip, "/", "GET", blocked=False)
-    return render_template('dashboard.html')
+    # Inject this server's own admin key into the page so the dashboard's
+    # own fetch() calls can authenticate automatically -- see auth.py.
+    return render_template('dashboard.html', admin_key=get_admin_key())
 
 @app.route('/predict', methods=['POST'])
 def run_predict():
@@ -100,7 +112,7 @@ def run_predict():
         elif -0.15 <= score <= 0.10:
             try:
                 r = get_redis()
-                r.setex(f"captcha:required:{ip}", 3600, 1)
+                r.set(f"captcha:required:{ip}", 1, ex=3600)
             except:
                 pass
             record_request(ip, "/predict", "POST", blocked=False, ml_verdict="suspicious", ml_score=score)
@@ -123,6 +135,7 @@ def stats_data():
     return jsonify(get_stats())
 
 @app.route('/api/ban', methods=['POST'])
+@require_admin_key
 def api_manual_ban():
     data = request.json or {}
     ip = data.get("ip")
@@ -132,20 +145,24 @@ def api_manual_ban():
     return jsonify({"error": "Missing IP"}), 400
 
 @app.route('/api/attack/start', methods=['POST'])
+@require_admin_key
 def api_attack_start():
     data = request.json or {}
     attack_type = data.get("type", "flood")
     return jsonify(attack_simulator.start_attack(attack_type))
 
 @app.route('/api/attack/stop', methods=['POST'])
+@require_admin_key
 def api_attack_stop():
     return jsonify(attack_simulator.stop_attack())
 
 @app.route('/api/attack/status')
+@require_admin_key
 def api_attack_status():
     return jsonify(attack_simulator.get_status())
 
 @app.route('/api/telemetry')
+@require_admin_key
 def api_telemetry():
     return jsonify(get_click_feed())
 

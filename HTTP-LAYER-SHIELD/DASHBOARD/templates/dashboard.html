@@ -152,6 +152,12 @@
     </div>
 </div>
 
+<script>
+    // Injected by server.py's "/" route from the ADMIN_API_KEY environment
+    // variable -- lets this page's own fetch() calls authenticate against
+    // the /api/* admin routes automatically. See API/auth.py.
+    const ADMIN_API_KEY = "{{ admin_key }}";
+</script>
 <script src="/static/js/dashboard.js"></script>
 <script src="/static/js/tracker.js"></script>
 </body>
