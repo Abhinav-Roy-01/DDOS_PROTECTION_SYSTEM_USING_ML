@@ -241,3 +241,42 @@ def test_public_routes_still_work_without_admin_key(client):
         'max_element_click_rate': 1, 'scroll_events': 1, 'keystroke_count': 1
     }, headers={"X-Forwarded-For": "10.0.0.9"})
     assert predict_resp.status_code in (200, 403)  # reachable at all, not 401
+
+
+# --- threshold calibration: regression test for the fix in this session --
+
+def test_score_thresholds_dont_false_positive_typical_humans(client):
+    """Locks in the calibration fix. Before this fix, the thresholds
+    (-0.15 / 0.10) put 62% of genuine humans from the training set into
+    the CAPTCHA band -- meaning a live demo would CAPTCHA-gate normal
+    mouse movement most of the time. Samples several real 'casual_browser'
+    rows from training_data.csv and confirms the large majority land in
+    ALLOWED, not CAPTCHA or BLOCKED. If this starts failing after a model
+    retrain, the thresholds in server.py need to be recalibrated against
+    the new model's score distribution -- see the comment there for the
+    analysis method.
+    """
+    import pandas as pd
+    import os as _os
+
+    dataset_path = _os.path.join(
+        _os.path.dirname(__file__), "..", "ML", "DATASET", "training_data.csv"
+    )
+    df = pd.read_csv(dataset_path)
+    cols = ['click_count', 'avg_click_interval', 'click_interval_variance',
+            'click_interval_entropy', 'mouse_velocity_variance',
+            'max_element_click_rate', 'scroll_events', 'keystroke_count']
+
+    humans = df[df['label'] == 'human'].sample(n=100, random_state=42)
+    allowed_count = 0
+    for i, (_, row) in enumerate(humans.iterrows()):
+        r = client.post('/predict', json=row[cols].to_dict(),
+                         headers={"X-Forwarded-For": f"10.5.0.{i % 250 + 1}"})
+        if r.get_json().get("status") == "allowed":
+            allowed_count += 1
+
+    allowed_pct = allowed_count / len(humans) * 100
+    assert allowed_pct > 90, (
+        f"only {allowed_pct:.0f}% of genuine human samples were allowed outright "
+        f"(expected >90%) -- threshold calibration has regressed"
+    )

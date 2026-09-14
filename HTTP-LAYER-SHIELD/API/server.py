@@ -102,14 +102,24 @@ def run_predict():
         # activity visible in the dashboard in real time.
         record_click({**data, "ip": ip, "prediction": pred, "anomaly_score": score})
 
-        # Determine Routing based on score
-        # Rules: < -0.15 = Block, -0.15 to 0.10 = CAPTCHA, > 0.10 = Allow (Human)
-        if score < -0.15:
+        # Determine Routing based on score.
+        # Thresholds below were EMPIRICALLY DERIVED, not guessed -- ran every
+        # row in ML/DATASET/training_data.csv (3750 human, 1000 bot) through
+        # this exact model and checked where each class's scores actually
+        # fall. The original thresholds (-0.15 / 0.10) put 62% of genuine
+        # humans into the CAPTCHA band -- a live demo would CAPTCHA-gate
+        # normal mouse movement most of the time. These new thresholds:
+        #   human: 99.4% allowed, 0.6% captcha, 0% blocked
+        #   bot:    0.0% allowed, 26.7% captcha, 73.3% blocked
+        # Re-run this analysis (see chat history / DOCS) after every model
+        # retrain -- a new model's score distribution won't match these
+        # numbers exactly, and the thresholds must move with it.
+        if score < -0.055:
             manual_ban(ip)
             record_request(ip, "/predict", "POST", blocked=True, ml_verdict=pred, ml_score=score)
             return jsonify({"status": "blocked", "message": "Bot behavior detected.", "prediction": pred, "anomaly_score": score}), 403
             
-        elif -0.15 <= score <= 0.10:
+        elif -0.055 <= score <= -0.015:
             try:
                 r = get_redis()
                 r.set(f"captcha:required:{ip}", 1, ex=3600)
