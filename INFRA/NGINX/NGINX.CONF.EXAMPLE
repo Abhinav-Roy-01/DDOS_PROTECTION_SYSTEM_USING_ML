@@ -1,0 +1,19 @@
+# NGINX.CONF.EXAMPLE
+#
+# PHASE: 1
+#
+# NOTE ON FILENAME: nginx doesn't care about case, but the actual deployed
+# file on the VPS should be placed as lowercase per standard convention:
+#   /etc/nginx/sites-available/ddos-shield
+# This .EXAMPLE file is the source of truth kept in the repo (ALL CAPS,
+# per project convention); copy its contents to a lowercase file on the
+# server itself.
+#
+# WHAT GOES HERE (Phase 1):
+#   - limit_req_zone for per-IP rate limiting
+#   - limit_conn_zone for connection caps (Slowloris defense)
+#   - proxy_pass to gunicorn (127.0.0.1:8080 or a unix socket)
+#   - reasonable client_body_timeout / client_header_timeout
+#   - HTTPS server block (Certbot-managed certs)
+#
+# NOT YET IMPLEMENTED -- placeholder only.

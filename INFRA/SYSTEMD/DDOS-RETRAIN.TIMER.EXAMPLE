@@ -1,0 +1,9 @@
+# DDOS-RETRAIN.TIMER.EXAMPLE + DDOS-RETRAIN.SERVICE.EXAMPLE
+#
+# PHASE: 4
+#
+# A systemd timer alternative to a plain cron entry for running
+# SCRIPTS/RETRAIN/RETRAIN_SCHEDULER.py --once daily. Same lowercase-on-
+# server note as DDOS-API.SERVICE.EXAMPLE applies.
+#
+# NOT YET IMPLEMENTED -- placeholder only.

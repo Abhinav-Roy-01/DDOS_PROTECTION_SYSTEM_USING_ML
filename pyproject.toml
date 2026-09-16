@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+# Default pytest only discovers lowercase test_*.py / *_test.py -- add the
+# ALL-CAPS pattern so TEST_*.py files (this project's naming convention)
+# get collected too.
+python_files = ["test_*.py", "TEST_*.py", "*_test.py"]

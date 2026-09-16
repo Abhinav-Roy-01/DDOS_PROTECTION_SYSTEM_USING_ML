@@ -1,0 +1,14 @@
+# DDOS-API.SERVICE.EXAMPLE
+#
+# PHASE: 1
+#
+# NOTE ON FILENAME: systemd unit files are conventionally lowercase
+# (ddos-api.service) when actually placed in /etc/systemd/system/. This
+# .EXAMPLE file is the ALL-CAPS source of truth kept in the repo.
+#
+# WHAT GOES HERE:
+#   - ExecStart running gunicorn against API/SERVER.py
+#   - Restart=on-failure
+#   - EnvironmentFile pointing at the .env with real secrets
+#
+# NOT YET IMPLEMENTED -- placeholder only.

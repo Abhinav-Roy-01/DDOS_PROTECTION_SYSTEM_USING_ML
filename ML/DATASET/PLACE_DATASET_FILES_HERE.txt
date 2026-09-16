@@ -1,0 +1,3 @@
+Phase 2: copy training_data.csv and human_only.csv here from the old
+project (as-is). feedback_human.csv / feedback_bot.csv / ARCHIVE/ get
+created automatically once FEEDBACK_STORE.py starts running in Phase 2/4.

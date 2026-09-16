@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Env / secrets -- never commit real values
+.env
+
+# ML artifacts that shouldn't bloat git history once real training happens
+ML/MODELS/BACKUPS/
+ML/DATASET/ARCHIVE/
+ML/DATASET/feedback_human.csv
+ML/DATASET/feedback_bot.csv
+ML/DATASET/feedback_audit.jsonl
+ML/MODELS/retrain_log.jsonl
+
+# OS
+.DS_Store

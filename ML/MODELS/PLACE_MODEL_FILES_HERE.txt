@@ -1,0 +1,3 @@
+Phase 2: copy aethercept_model.pkl, aethercept_scaler.pkl, and
+THRESHOLDS.json here from the old project (as-is, no changes needed).
+See DOCS/REUSE_MAP.md.
