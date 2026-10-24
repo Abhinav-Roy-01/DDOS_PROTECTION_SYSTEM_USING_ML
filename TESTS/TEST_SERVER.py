@@ -70,7 +70,7 @@ def test_admin_route_with_correct_key_is_200(client):
 
 
 def test_admin_route_is_503_when_no_key_configured(monkeypatch):
-    monkeypatch.delenv("ADMIN_API_KEY", raising=False)
+    monkeypatch.setenv("ADMIN_API_KEY", "")
     monkeypatch.setenv("TRUSTED_PROXY_COUNT", "0")
     app = SERVER.create_app()
     app.testing = True

@@ -18,6 +18,7 @@ RUN WITH GUNICORN (Linux / WSL):
 ENV VARS (put them in .env at the repo root):
     ADMIN_API_KEY        required for admin routes
     REDIS_URL            default redis://localhost:6379/0
+    PORT                 dev server port for `python API/SERVER.py`, default 8080
     TRUSTED_PROXY_COUNT  how many proxies (nginx etc.) sit in front of this app.
                          Default 0. Set to 1 behind nginx so the real client IP
                          is read from X-Forwarded-For. Keep 0 when there is no
@@ -139,4 +140,5 @@ def create_app():
 
 if __name__ == "__main__":
     # Development server only. Production uses gunicorn (see top of file).
-    create_app().run(host="127.0.0.1", port=8080)
+    app = create_app()  # also loads .env
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "8080")))

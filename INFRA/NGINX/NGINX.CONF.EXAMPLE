@@ -1,19 +1,84 @@
-# NGINX.CONF.EXAMPLE
+# NGINX.CONF.EXAMPLE -- reverse proxy in front of gunicorn (API/SERVER.py).
 #
 # PHASE: 1
 #
-# NOTE ON FILENAME: nginx doesn't care about case, but the actual deployed
-# file on the VPS should be placed as lowercase per standard convention:
-#   /etc/nginx/sites-available/ddos-shield
-# This .EXAMPLE file is the source of truth kept in the repo (ALL CAPS,
-# per project convention); copy its contents to a lowercase file on the
-# server itself.
+# FILENAME NOTE: this ALL-CAPS file is the copy kept in the repo. On the server
+# copy its contents to a lowercase file:
+#     /etc/nginx/sites-available/ddos-shield
+# then symlink it into sites-enabled, run `nginx -t`, and reload nginx.
+# Files in sites-available are loaded INSIDE nginx's http { } block, which is
+# why the limit_*_zone lines below can sit at the top of this file.
 #
-# WHAT GOES HERE (Phase 1):
-#   - limit_req_zone for per-IP rate limiting
-#   - limit_conn_zone for connection caps (Slowloris defense)
-#   - proxy_pass to gunicorn (127.0.0.1:8080 or a unix socket)
-#   - reasonable client_body_timeout / client_header_timeout
-#   - HTTPS server block (Certbot-managed certs)
+# WHAT EACH LAYER DOES:
+#   limit_req   caps requests per second per client IP (flood protection)
+#   limit_conn  caps open connections per client IP (Slowloris protection)
+#   timeouts    drop clients that send headers/body too slowly
+#   buffering   nginx reads the whole request before passing it to gunicorn,
+#               so slow clients never tie up a gunicorn worker
 #
-# NOT YET IMPLEMENTED -- placeholder only.
+# The limits here are deliberately LOOSER than the limiter in RATE_LIMITER.py
+# (30 requests / 10 s). nginx only cuts extreme floods, so the app still sees
+# moderate abuse and can ban the IP.
+#
+# BEHIND CLOUDFLARE (later, Phase 3): $remote_addr will be Cloudflare's IP, not
+# the visitor's. Add the realip module (set_real_ip_from <Cloudflare ranges>;
+# real_ip_header CF-Connecting-IP;) so the limits below apply per visitor.
+
+# gunicorn listens here (see INFRA/SYSTEMD/DDOS-API.SERVICE.EXAMPLE).
+upstream ddos_app {
+    server 127.0.0.1:8080;
+    keepalive 16;
+}
+
+# Shared-memory zones that remember per-IP counters (10 MB holds ~160k IPs).
+limit_req_zone  $binary_remote_addr zone=PER_IP:10m       rate=20r/s;
+limit_req_zone  $binary_remote_addr zone=ADMIN_PER_IP:10m rate=5r/s;
+limit_conn_zone $binary_remote_addr zone=CONN_PER_IP:10m;
+
+server {
+    listen 80 default_server;
+    server_name _;                      # replace with your domain in Phase 1 deploy
+    server_tokens off;                  # hide the nginx version
+
+    # --- Slowloris protection: drop slow or idle clients -------------------
+    client_header_timeout 10s;
+    client_body_timeout   10s;
+    send_timeout          10s;
+    keepalive_timeout     15s;
+    reset_timedout_connection on;       # free the socket immediately on timeout
+    client_max_body_size  64k;          # forms and telemetry JSON are small
+
+    # --- Connection and request limits (reject with 429, not nginx's 503) ---
+    limit_conn CONN_PER_IP 50;          # 50 > one browser's ~6 parallel connections
+    limit_conn_status 429;
+    limit_req_status  429;
+    limit_req_log_level  warn;
+    limit_conn_log_level warn;
+
+    # --- Proxy settings shared by every location below ----------------------
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";                 # needed for upstream keepalive
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    # Overwrite (do not append) so a client cannot fake X-Forwarded-For.
+    # API/SERVER.py reads this when TRUSTED_PROXY_COUNT=1.
+    proxy_set_header X-Forwarded-For   $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout    30s;
+    proxy_read_timeout    30s;
+
+    # Admin API: stricter limit. Phase 3 will also restrict it to your own IP.
+    location /api/ {
+        limit_req zone=ADMIN_PER_IP burst=10 nodelay;
+        # allow YOUR.IP.ADDRESS.HERE;
+        # deny  all;
+        proxy_pass http://ddos_app;
+    }
+
+    # Everything else: the demo app, /health, /predict, CAPTCHA.
+    location / {
+        limit_req zone=PER_IP burst=40 nodelay;
+        proxy_pass http://ddos_app;
+    }
+}
