@@ -165,6 +165,11 @@ def test_init_records_start_time_once(clock):
     assert RL.get_stats()["uptime_sec"] == 100
 
 
+def test_public_redis_client_accessor_returns_injected_client(fresh_redis):
+    """Security-sensitive modules share the same configured Redis client."""
+    assert RL.get_redis_client() is fresh_redis
+
+
 class BrokenRedis:
     """Stand-in client where every call fails like a dead Redis server."""
     def __getattr__(self, name):

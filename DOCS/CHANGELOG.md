@@ -9,3 +9,4 @@
   the PRD's nats unit and exact dependency pins for reproducible training.
 - Added model validation, integrity-checked artifact loading, threshold
   routing, bootstrap training, and synthetic baseline metrics.
+- Added IP-bound single-use pass tokens with Redis replay protection.

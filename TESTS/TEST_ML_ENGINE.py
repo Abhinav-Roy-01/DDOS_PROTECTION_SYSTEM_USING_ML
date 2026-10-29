@@ -7,14 +7,11 @@ import sys
 import numpy as np
 import pytest
 
-API_DIR = os.path.join(os.path.dirname(__file__), "..", "API")
-TRAINING_DIR = os.path.join(os.path.dirname(__file__), "..", "ML", "TRAINING")
-sys.path.insert(0, API_DIR)
-sys.path.insert(0, TRAINING_DIR)
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, ROOT_DIR)
 
-import ML_ENGINE
-import BUILD_DATASET
-import RETRAIN
+from API import ML_ENGINE
+from ML.TRAINING import BUILD_DATASET, RETRAIN
 
 
 @pytest.fixture

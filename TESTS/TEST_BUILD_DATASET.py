@@ -1,14 +1,15 @@
 """Tests for deterministic synthetic training data generation."""
 
-import os
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "ML", "TRAINING"))
+ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR))
 
-import BUILD_DATASET
+from ML.TRAINING import BUILD_DATASET
 
 
 def test_dataset_is_deterministic_and_has_expected_classes():

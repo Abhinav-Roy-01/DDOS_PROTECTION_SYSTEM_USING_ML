@@ -86,6 +86,11 @@ def set_redis_client(client):
     _client = client
 
 
+def get_redis_client():
+    """Return the shared Redis client for security-sensitive cross-module state."""
+    return _get_client()
+
+
 def _fail_open(default):
     """Decorator: if Redis raises, log a warning and return `default`
     instead of crashing the request."""

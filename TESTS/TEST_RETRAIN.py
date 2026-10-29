@@ -6,13 +6,10 @@ import sys
 
 import numpy as np
 
-TRAINING_DIR = os.path.join(os.path.dirname(__file__), "..", "ML", "TRAINING")
-API_DIR = os.path.join(os.path.dirname(__file__), "..", "API")
-sys.path.insert(0, TRAINING_DIR)
-sys.path.insert(0, API_DIR)
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, ROOT_DIR)
 
-import BUILD_DATASET
-import RETRAIN
+from ML.TRAINING import BUILD_DATASET, RETRAIN
 
 
 def test_bootstrap_writes_model_bundle_and_metadata(tmp_path):
