@@ -14,10 +14,10 @@
 ## PRD schedule
 
 The supplied PRD refers to a Section 13 weekly plan, but the supplied
-document ends at Section 12.4. The repository roadmap currently contains a
-16-week schedule. Work remains incremental and will not skip ahead to later
-features; confirm the intended sequence with the owner if the missing PRD
-section changes it.
+document ends at Section 12.4. The README records the implementation
+sequence without assigning dates that are not present in the supplied PRD.
+Confirm the intended schedule with the owner if the missing section changes
+the phase order.
 
 ## ML feature units
 
