@@ -4,10 +4,11 @@ ML-based application-layer (L7) bot/DDoS behavioral detection system.
 Rebuilt scaffold for a real, deployed, protected demo target — not just a
 local simulation.
 
-**Status:** Phase 1 foundation — Flask API, Redis-backed rate limiting,
-admin controls, nginx example, and automated tests are implemented. The ML
-detector, protected demo form, CAPTCHA, dashboard, and retraining workflow
-are still in progress.
+**Status:** Local prototype foundation — the Flask API, Redis-backed
+rate-limiter, admin controls, nginx example, synthetic dataset builder,
+integrity-checked IsolationForest bootstrap, and automated tests are
+implemented. The `/predict` and protected contact flows, CAPTCHA, dashboard,
+and safe retraining workflow are still in progress.
 
 ## What this project actually does (read this first)
 
@@ -64,6 +65,13 @@ Generate one with:
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Build the synthetic dataset and bootstrap the ML model once:
+
+```powershell
+python ML/TRAINING/BUILD_DATASET.py
+python ML/TRAINING/RETRAIN.py --bootstrap
 ```
 
 Start the app, nginx, and Redis:
