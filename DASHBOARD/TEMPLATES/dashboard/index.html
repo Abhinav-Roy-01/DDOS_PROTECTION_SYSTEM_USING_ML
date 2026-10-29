@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>DDOS-SHIELD | Admin dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('dashboard.static', filename='dashboard.css') }}">
+  <script src="{{ url_for('dashboard.static', filename='dashboard.js') }}" defer></script>
+</head>
+<body>
+  <main class="dashboard" data-dashboard-shell>
+    <header class="topbar">
+      <a class="brand" href="/">DDOS-SHIELD <span>CONTROL ROOM</span></a>
+      <a class="public-link" href="/">Open protected demo</a>
+    </header>
+
+    <section class="intro">
+      <p class="eyebrow">LIVE OPERATIONS</p>
+      <h1>Protection overview</h1>
+      <p class="subtitle">Live local prototype metrics, model status, and verified contact messages.</p>
+    </section>
+
+    <section class="access-panel" aria-label="Admin authentication">
+      <label for="admin-key">Admin API key</label>
+      <input id="admin-key" type="password" autocomplete="current-password" placeholder="Enter X-Admin-Key">
+      <button id="connect" type="button">Connect</button>
+      <span id="connection-status" role="status" aria-live="polite">Not connected</span>
+    </section>
+
+    <p id="error" class="error" role="alert" aria-live="assertive"></p>
+
+    <section class="metrics" aria-label="Request and model metrics">
+      <article class="metric"><span>Logged requests</span><strong id="total-requests">—</strong></article>
+      <article class="metric"><span>Blocked requests</span><strong id="blocked-requests">—</strong></article>
+      <article class="metric"><span>Active bans</span><strong id="active-bans">—</strong></article>
+      <article class="metric"><span>Pending feedback</span><strong id="pending-feedback">—</strong></article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">MODEL</p><h2>Runtime status</h2></div>
+          <span id="model-status" class="pill">Unknown</span>
+        </div>
+        <p id="model-version" class="muted">Model version unavailable</p>
+        <dl id="verdict-counters" class="counter-list"></dl>
+        <div class="retrain-controls">
+          <button id="retrain-dry-run" type="button" class="secondary-button">Dry-run candidate</button>
+          <button id="retrain-deploy" type="button">Train &amp; deploy</button>
+          <p id="retrain-status" class="muted" role="status" aria-live="polite">Retraining status unavailable.</p>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">SCORE DISTRIBUTION</p><h2>Anomaly histogram</h2></div>
+        </div>
+        <canvas id="score-chart" width="600" height="230" aria-label="Anomaly score histogram"></canvas>
+      </article>
+    </section>
+
+    <section class="panel-grid lower-grid">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>Requests</h2></div></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Time</th><th>Path</th><th>IP</th><th>Status</th></tr></thead>
+            <tbody id="request-rows"><tr><td colspan="4">Connect to load activity.</td></tr></tbody>
+          </table>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">THREAT CONTROL</p><h2>Active bans</h2></div></div>
+        <form id="ban-form" class="ban-form">
+          <label for="ban-ip">Ban an IP address</label>
+          <div><input id="ban-ip" name="ip" placeholder="203.0.113.10" required><button type="submit">Ban</button></div>
+        </form>
+        <ul id="ban-list" class="ban-list"><li>Connect to manage bans.</li></ul>
+      </article>
+    </section>
+
+    <section class="panel-grid lower-grid">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">TRAFFIC</p><h2>Last 60 seconds</h2></div></div>
+        <canvas id="traffic-chart" width="600" height="210" aria-label="Allowed and blocked requests over the last minute"></canvas>
+      </article>
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">THREAT MATRIX</p><h2>Top client addresses</h2></div></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>IP</th><th>Requests</th><th>Blocked</th><th>Threat</th></tr></thead>
+            <tbody id="threat-rows"><tr><td colspan="4">Connect to load threat data.</td></tr></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel messages-panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">VERIFIED INBOX</p><h2>Protected contact messages</h2></div>
+        <span class="muted">Latest 20</span>
+      </div>
+      <div id="messages" class="messages-list"><p class="muted">Connect to load verified messages.</p></div>
+    </section>
+
+    <footer>DDOS-SHIELD local prototype · Admin endpoints require an allowlisted source IP and API key.</footer>
+  </main>
+</body>
+</html>

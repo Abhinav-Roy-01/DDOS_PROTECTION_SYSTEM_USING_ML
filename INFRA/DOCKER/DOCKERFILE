@@ -9,6 +9,10 @@ COPY API/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY API/ /app/API/
-COPY ML/MODELS/ /app/ML/MODELS/
+COPY CAPTCHA/ /app/CAPTCHA/
+COPY DASHBOARD/ /app/DASHBOARD/
+COPY DEMO-APP/ /app/DEMO-APP/
+COPY FEEDBACK/ /app/FEEDBACK/
+COPY ML/ /app/ML/
 
 CMD ["gunicorn", "--chdir", "/app/API", "SERVER:create_app()", "--workers", "1", "--bind", "0.0.0.0:8080", "--access-logfile", "-", "--error-logfile", "-"]

@@ -4,11 +4,11 @@ ML-based application-layer (L7) bot/DDoS behavioral detection system.
 Rebuilt scaffold for a real, deployed, protected demo target — not just a
 local simulation.
 
-**Status:** Local prototype foundation — the Flask API, Redis-backed
-rate-limiter, admin controls, nginx example, synthetic dataset builder,
-integrity-checked IsolationForest bootstrap, and automated tests are
-implemented. The `/predict` and protected contact flows, CAPTCHA, dashboard,
-and safe retraining workflow are still in progress.
+**Status:** Local prototype — the Flask API, Redis-backed rate limiting,
+synthetic ML model, browser telemetry demo, protected contact flow, one-time
+pass tokens, game CAPTCHA, allowlisted admin dashboard, and quality-gated
+retraining workflow are implemented for the local prototype. Cloud
+deployment and production identity/TLS integration remain in progress.
 
 ## What this project actually does (read this first)
 
@@ -54,14 +54,17 @@ Phase 5  Load testing + observability
 Phase 6  Validation + documentation
 ```
 
-The API and rate-limiter are functional. Remaining components are filled in
-one phase at a time, keeping the main branch runnable and tested.
+The local demo is functional and uses a checked-in bootstrap model. Its
+shape-sequence CAPTCHA is a prototype challenge, not a substitute for a
+production anti-abuse provider. Remaining components are filled in one
+phase at a time, keeping the main branch runnable and tested.
 
 ## Run the local stack
 
 Requirements: Docker Desktop with Docker Compose. From the repository root,
-copy `.env.example` to `.env` and set `ADMIN_API_KEY` to a unique value.
-Generate one with:
+copy `.env.example` to `.env` and set unique random values for
+`ADMIN_API_KEY`, `PASS_TOKEN_SECRET`, and `FEEDBACK_HASH_KEY`. Generate a
+value with:
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -80,9 +83,16 @@ Start the app, nginx, and Redis:
 docker compose -f INFRA/DOCKER/COMPOSE.yml up --build
 ```
 
-Open `http://127.0.0.1:8090/health`. Admin endpoints are available through
-nginx; send the configured key in the `X-Admin-Key` header. The Redis port
-is not published to the host. Stop the local stack with Ctrl+C, then run
+Open `http://127.0.0.1:8090/` for the protected-contact demo or
+`http://127.0.0.1:8090/health` for the liveness check. Admin endpoints are available through
+nginx; send the configured key in the `X-Admin-Key` header. Admin requests
+are restricted by `ADMIN_IP_ALLOWLIST` (loopback by default) and use a
+separate rate bucket. Local Compose additionally trusts its private Docker
+bridge range because Docker Desktop forwards loopback traffic through that
+gateway; the published app port remains bound to localhost. Replace that
+range with exact admin networks outside local Compose. The Redis port
+is not published to the host. `/dashboard` shows live local metrics and
+provides dry-run/deploy retraining controls. Stop the local stack with Ctrl+C, then run
 `docker compose -f INFRA/DOCKER/COMPOSE.yml down`.
 
 This is a local prototype only; it is not the public production deployment.

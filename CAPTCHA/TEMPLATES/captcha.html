@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>DDOS-SHIELD | Quick verification</title>
+  <link rel="stylesheet" href="{{ url_for('captcha.static', filename='captcha.css') }}">
+  <script src="{{ url_for('captcha.static', filename='captcha.js') }}" defer></script>
+</head>
+<body>
+  <main class="challenge-shell">
+    <a class="brand" href="/">DDOS-SHIELD</a>
+    <section class="challenge-card" id="challenge"
+      data-challenge-id="{{ challenge.challenge_id }}"
+      data-sequence="{{ challenge.sequence|join(',') }}">
+      <p class="eyebrow">ONE QUICK CHECK</p>
+      <h1>Show us you're here.</h1>
+      <p class="instructions">Remember the shape order, then tap each shape in that order.</p>
+      <div class="sequence" aria-label="Shape sequence to remember">
+        {% for shape in challenge.sequence %}
+        <span class="shape {{ shape }}" aria-label="{{ shape }}">{{ shape|title }}</span>
+        {% endfor %}
+      </div>
+      <div class="choices" aria-label="Choose the shapes in order">
+        {% for shape in challenge.choices %}
+        <button class="shape choice {{ shape }}" type="button" data-shape="{{ shape }}">{{ shape|title }}</button>
+        {% endfor %}
+      </div>
+      <p id="progress" class="progress" aria-live="polite">0 of 3 selected</p>
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+      <a class="back-link" href="/captcha/new_game">Start a new check</a>
+      <a class="back-link" href="/">Back to the protected form</a>
+    </section>
+  </main>
+</body>
+</html>

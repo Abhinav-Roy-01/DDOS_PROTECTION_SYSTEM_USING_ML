@@ -32,8 +32,10 @@ def fresh_redis():
     """Every test gets a brand-new empty fake Redis."""
     client = fakeredis.FakeRedis(decode_responses=True)
     RL.set_redis_client(client)
+    RL.configure_admin_allowlist(())
     yield client
     RL.set_redis_client(None)
+    RL.configure_admin_allowlist(())
 
 
 # --- RATE LIMITING ---------------------------------------------------------
@@ -89,6 +91,25 @@ def test_ban_expires_after_ban_duration(clock):
     RL.manual_ban("6.6.6.6")
     clock.now += RL.BAN_DURATION + 1
     assert RL.is_banned("6.6.6.6") is False
+
+
+def test_ipv6_limiter_identity_and_ban_are_shared_by_subnet(clock):
+    ip = "2001:db8:abcd:1:1234::1"
+    assert RL.client_key(ip) == "2001:db8:abcd:1::/64"
+
+    RL.manual_ban(ip)
+
+    assert RL.is_banned("2001:db8:abcd:1:ffff::9") is True
+    assert RL.is_banned("2001:db8:abcd:2::9") is False
+
+
+def test_allowlisted_admin_address_cannot_be_banned(clock):
+    import ipaddress
+
+    RL.configure_admin_allowlist([ipaddress.ip_network("127.0.0.1/32")])
+
+    assert RL.manual_ban("127.0.0.1") is False
+    assert RL.is_banned("127.0.0.1") is False
 
 
 # --- SHARED STATE ACROSS WORKERS (the reason for using Redis) ---------------
@@ -168,6 +189,51 @@ def test_init_records_start_time_once(clock):
 def test_public_redis_client_accessor_returns_injected_client(fresh_redis):
     """Security-sensitive modules share the same configured Redis client."""
     assert RL.get_redis_client() is fresh_redis
+
+
+def test_predict_budget_rejects_the_thirteenth_call_and_slides(clock):
+    """The stricter predict budget is separate and uses a rolling minute."""
+    for _ in range(RL.PREDICT_LIMIT):
+        assert RL.check_predict_budget("1.2.3.4") is True
+    assert RL.check_predict_budget("1.2.3.4") is False
+
+    clock.now += RL.PREDICT_WINDOW + 1
+    assert RL.check_predict_budget("1.2.3.4") is True
+
+
+def test_predict_budget_is_shared_across_ipv6_addresses_in_a_subnet(clock):
+    assert RL.check_predict_budget("2001:db8:abcd:1::1") is True
+    assert RL.check_predict_budget("2001:db8:abcd:1:ffff::1") is True
+    assert RL.get_redis_client().zcard("SHIELD:PREDICT:RATE:2001:db8:abcd:1::/64") == 2
+
+
+def test_counters_and_hourly_series_increment(clock):
+    """Product counters are shared and create expiring hourly series."""
+    assert RL.increment_counter("predict_allowed") == 1
+    assert RL.increment_counter("predict_allowed") == 1
+
+    assert RL.get_counters()["predict_allowed"] == 2
+    hour = "1970011213"
+    assert RL.get_redis_client().get(f"SHIELD:TS:predict_allowed:{hour}") == "2"
+
+
+def test_score_histogram_uses_fixed_point_zero_two_bins(clock):
+    """Scores are grouped into stable, fixed-width Redis histogram bins."""
+    RL.record_score(-0.055)
+    RL.record_score(-0.054)
+    RL.record_score(-0.014)
+
+    assert RL.get_score_histogram() == {"-0.06": 2, "-0.02": 1}
+
+
+def test_contact_message_log_is_capped_and_newest_first(clock, monkeypatch):
+    """Stored contact messages are bounded and returned newest first."""
+    monkeypatch.setattr(RL, "MAX_MESSAGES", 2)
+    for index in range(3):
+        RL.store_message({"name": f"person-{index}", "message": "hello"})
+
+    assert [row["name"] for row in RL.get_messages()] == ["person-2", "person-1"]
+    assert RL.get_messages(limit=0) == []
 
 
 class BrokenRedis:

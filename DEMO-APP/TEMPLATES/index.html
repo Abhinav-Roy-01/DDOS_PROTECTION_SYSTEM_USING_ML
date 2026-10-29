@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>DDOS-SHIELD | Protected contact demo</title>
+  <link rel="stylesheet" href="{{ url_for('demo.static', filename='style.css') }}">
+  <script src="{{ url_for('demo.static', filename='tracker.js') }}" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <a class="brand" href="/" aria-label="DDOS-SHIELD home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>DDOS-SHIELD</span>
+      </a>
+      <span class="status"><span class="status-dot"></span> Local prototype</span>
+    </header>
+
+    <section class="intro">
+      <p class="eyebrow">APPLICATION-LAYER PROTECTION</p>
+      <h1>A contact form with a smarter front door.</h1>
+      <p class="lead">
+        This demo measures ordinary browser interaction signals, scores them
+        locally, and gates this protected action when behavior looks unusual.
+        No credentials or sensitive personal data are used for scoring.
+      </p>
+    </section>
+
+    <section class="card" aria-labelledby="form-title">
+      <div class="card-heading">
+        <div>
+          <p class="eyebrow">PROTECTED ACTION</p>
+          <h2 id="form-title">Send a message</h2>
+        </div>
+        <span class="lock" aria-hidden="true">●</span>
+      </div>
+      <form id="contact-form" novalidate>
+        <div class="field-row">
+          <label>
+            <span>Name</span>
+            <input name="name" autocomplete="name" maxlength="100" required>
+          </label>
+          <label>
+            <span>Email</span>
+            <input name="email" type="email" autocomplete="email" maxlength="254" required>
+          </label>
+        </div>
+        <label>
+          <span>Message</span>
+          <textarea name="message" rows="5" maxlength="2000" required></textarea>
+        </label>
+        <label class="honeypot" aria-hidden="true" tabindex="-1">
+          <span>Leave this field empty</span>
+          <input name="website" tabindex="-1" autocomplete="off">
+        </label>
+        <div class="submit-row">
+          <button type="submit" id="submit-button">Continue securely <span aria-hidden="true">→</span></button>
+          <span class="privacy-note">Behavior signals are used only to protect this demo.</span>
+        </div>
+        <p id="result" class="result" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <footer>
+      <span>DDOS-SHIELD prototype</span>
+      <span>Behavioral scoring · one-time pass · protected action</span>
+    </footer>
+  </main>
+</body>
+</html>

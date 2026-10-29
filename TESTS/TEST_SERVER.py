@@ -17,6 +17,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "API"))
 import RATE_LIMITER as RL
 import SERVER
 
+SERVER.add_project_paths()
+import DEMO_ROUTES
+import RETRAIN_RUNNER
+
 ADMIN_KEY = "test-admin-key"
 ADMIN_HEADERS = {"X-Admin-Key": ADMIN_KEY}
 
@@ -45,6 +49,9 @@ def test_health_returns_ok(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.get_json() == {"status": "OK"}
+    assert response.headers["X-Request-ID"]
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
 
 
 def test_health_is_never_rate_limited(client):
@@ -84,6 +91,21 @@ def test_matrix_route_returns_timeline(client):
     assert len(response.get_json()["timeline"]) == 60
 
 
+def test_request_log_contains_request_id_and_status(client):
+    response = client.get("/api/stats", headers=ADMIN_HEADERS)
+    latest = RL.get_stats()["recent_requests"][-1]
+
+    assert latest["request_id"] == response.headers["X-Request-ID"]
+    assert latest["status_code"] == 200
+
+
+def test_unknown_route_returns_json(client):
+    response = client.get("/missing-route")
+
+    assert response.status_code == 404
+    assert response.get_json()["status"] == "not_found"
+
+
 # --- RATE LIMITING + BANS -----------------------------------------------------
 
 def test_requests_over_the_limit_get_429(client):
@@ -95,8 +117,9 @@ def test_requests_over_the_limit_get_429(client):
 
 
 def test_banned_ip_gets_403_and_health_still_works(client):
-    RL.manual_ban("127.0.0.1")
-    assert client.get("/api/stats", headers=ADMIN_HEADERS).status_code == 403
+    ip = "203.0.113.10"
+    RL.manual_ban(ip)
+    assert client.get("/", environ_base={"REMOTE_ADDR": ip}).status_code == 403
     assert client.get("/health").status_code == 200
 
 
@@ -116,11 +139,115 @@ def test_ban_route_rejects_invalid_ip(client):
 
 
 def test_blocked_requests_show_up_in_stats(client):
-    RL.manual_ban("127.0.0.1")
-    client.get("/api/stats", headers=ADMIN_HEADERS)          # blocked (403)
-    RL.manual_unban("127.0.0.1")
+    ip = "203.0.113.11"
+    RL.manual_ban(ip)
+    client.get("/", environ_base={"REMOTE_ADDR": ip})        # blocked (403)
+    RL.manual_unban(ip)
     stats = client.get("/api/stats", headers=ADMIN_HEADERS).get_json()
     assert stats["blocked_requests"] >= 1
+
+
+def test_admin_routes_reject_non_allowlisted_sources(client):
+    response = client.get(
+        "/api/stats",
+        headers=ADMIN_HEADERS,
+        environ_base={"REMOTE_ADDR": "203.0.113.12"},
+    )
+
+    assert response.status_code == 403
+    assert response.json["status"] == "admin_ip_not_allowed"
+
+
+def test_admin_ban_route_refuses_allowlisted_addresses(client):
+    response = client.post(
+        "/api/ban",
+        json={"ip": "127.0.0.1"},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 409
+    assert response.json["status"] == "refused"
+    assert not RL.is_banned("127.0.0.1")
+
+
+def test_admin_can_unban_a_normalized_ipv6_subnet(client):
+    subnet = "2001:db8:abcd:1::/64"
+    RL.manual_ban("2001:db8:abcd:1::1234")
+
+    response = client.post(
+        "/api/unban",
+        json={"ip": subnet},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 200
+    assert response.json["status"] == "unbanned"
+    assert not RL.is_banned("2001:db8:abcd:1::1")
+
+
+def test_admin_bucket_is_separate_from_public_bucket(client):
+    for _ in range(RL.RATE_LIMIT):
+        RL.check_rate_limit("127.0.0.1")
+
+    response = client.get("/api/stats", headers=ADMIN_HEADERS)
+
+    assert response.status_code == 200
+    assert not RL.is_banned("127.0.0.1")
+
+
+def test_dashboard_shell_and_admin_data_endpoints(client, monkeypatch):
+    class DashboardEngine:
+        def get_status(self):
+            return {
+                "degraded": False,
+                "model_version": "test-version",
+                "thresholds": {"block_below": -0.055, "captcha_below": -0.015},
+            }
+
+    monkeypatch.setattr(DEMO_ROUTES, "_engine", DashboardEngine())
+    page = client.get("/dashboard")
+    unauthorized = client.get("/api/overview")
+    overview = client.get("/api/overview", headers=ADMIN_HEADERS)
+    messages = client.get("/api/messages?limit=20", headers=ADMIN_HEADERS)
+
+    assert page.status_code == 200
+    assert b"Protection overview" in page.data
+    assert unauthorized.status_code == 401
+    assert overview.status_code == 200
+    assert overview.json["model"]["model_version"] == "test-version"
+    assert messages.status_code == 200
+    assert messages.json == {"messages": []}
+
+
+def test_dashboard_api_rejects_bad_message_limit(client):
+    response = client.get("/api/messages?limit=1000", headers=ADMIN_HEADERS)
+
+    assert response.status_code == 400
+    assert response.json["status"] == "invalid_request"
+
+
+def test_retraining_routes_are_admin_protected_and_validate_dry_run(client, monkeypatch):
+    monkeypatch.setattr(
+        RETRAIN_RUNNER,
+        "start_retrain",
+        lambda dry_run=False: ({"status": "dry_run_passed", "dry_run": dry_run}, 200),
+    )
+    unauthorized = client.get("/api/retrain/status")
+    invalid = client.post(
+        "/api/retrain/start",
+        json={"dry_run": "yes"},
+        headers=ADMIN_HEADERS,
+    )
+    started = client.post(
+        "/api/retrain/start",
+        json={"dry_run": True},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert unauthorized.status_code == 401
+    assert invalid.status_code == 400
+    assert started.status_code == 200
+    assert started.json == {"status": "dry_run_passed", "dry_run": True}
 
 
 # --- PROXY HANDLING (real client IP behind nginx) ------------------------------

@@ -2,6 +2,8 @@ services:
   redis:
     image: redis:7
     command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -14,12 +16,17 @@ services:
       dockerfile: INFRA/DOCKER/DOCKERFILE
     environment:
       ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      ADMIN_IP_ALLOWLIST: "${ADMIN_IP_ALLOWLIST:-127.0.0.1/32,::1/128},172.16.0.0/12"
+      PASS_TOKEN_SECRET: ${PASS_TOKEN_SECRET:-}
+      FEEDBACK_HASH_KEY: ${FEEDBACK_HASH_KEY:-}
       ENVIRONMENT: development
       REDIS_URL: redis://redis:6379/0
       TRUSTED_PROXY_COUNT: "1"
     depends_on:
       redis:
         condition: service_healthy
+    volumes:
+      - ../../ML/MODELS:/app/ML/MODELS
     healthcheck:
       test:
         - CMD
@@ -39,3 +46,6 @@ services:
     depends_on:
       app:
         condition: service_healthy
+
+volumes:
+  redis_data:

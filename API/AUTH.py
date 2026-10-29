@@ -18,6 +18,15 @@ def get_admin_key():
     return os.environ.get("ADMIN_API_KEY") or None
 
 
+def is_valid_admin_key(provided):
+    """Compare a supplied admin key with the configured server key."""
+    expected = get_admin_key()
+    return expected is not None and hmac.compare_digest(
+        str(provided).encode(),
+        expected.encode(),
+    )
+
+
 def require_admin_key(view):
     """Decorator for admin routes. The caller must send the key in the
     X-Admin-Key header. Returns 503 if no key is configured on the server,
@@ -29,8 +38,7 @@ def require_admin_key(view):
             return jsonify({"error": "Admin key is not configured on the server."}), 503
 
         provided = request.headers.get("X-Admin-Key", "")
-        # compare_digest avoids leaking the key through response timing.
-        if not hmac.compare_digest(provided.encode(), expected.encode()):
+        if not is_valid_admin_key(provided):
             return jsonify({"error": "Invalid or missing admin key."}), 401
 
         return view(*args, **kwargs)

@@ -1,0 +1,11 @@
+{
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/API",
+    "${workspaceFolder}/CAPTCHA",
+    "${workspaceFolder}/DASHBOARD",
+    "${workspaceFolder}/FEEDBACK",
+    "${workspaceFolder}/DEMO-APP",
+    "${workspaceFolder}/ML",
+    "${workspaceFolder}/ML/TRAINING"
+  ]
+}
