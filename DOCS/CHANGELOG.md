@@ -10,3 +10,5 @@
 - Added model validation, integrity-checked artifact loading, threshold
   routing, bootstrap training, and synthetic baseline metrics.
 - Added IP-bound single-use pass tokens with Redis replay protection.
+- Added Redis-backed feedback labels with hashed IPs, per-IP/subnet caps,
+  audit records, and recoverable training exports.
