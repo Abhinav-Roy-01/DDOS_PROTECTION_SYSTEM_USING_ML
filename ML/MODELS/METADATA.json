@@ -1,0 +1,46 @@
+{
+  "artifact_sha256": {
+    "aethercept_model.pkl": "87e89384418ae436847e9d94e9e6628c2897898c96d7940b8b4d6c9011c51e6b",
+    "aethercept_scaler.pkl": "ec3e1ac41cdb157dc05d256dbf23133f7b9f3693975b79151b9cd714aab0f13b"
+  },
+  "canary_metrics": {
+    "available": false,
+    "reason": "Bootstrap has no canary set."
+  },
+  "feature_names": [
+    "click_count",
+    "avg_click_interval",
+    "click_interval_variance",
+    "click_interval_entropy",
+    "mouse_velocity_variance",
+    "max_element_click_rate",
+    "scroll_events",
+    "keystroke_count"
+  ],
+  "git_commit": "315022e0132557b5eb86a410e6611497522b58c3",
+  "model_params": {
+    "contamination": 0.01,
+    "n_estimators": 100,
+    "n_jobs": 1,
+    "random_state": 42
+  },
+  "model_version": "bootstrap-2620c9d11206-42",
+  "numpy_version": "2.5.1",
+  "python_version": "3.13.14",
+  "row_counts": {
+    "base_human": 3750,
+    "feedback_human": 0,
+    "real_human": 0
+  },
+  "scikit_learn_version": "1.9.0",
+  "seed": 42,
+  "thresholds": {
+    "block_below": -0.055,
+    "captcha_below": -0.015
+  },
+  "trained_at": "2026-10-29T18:02:07.311603+00:00",
+  "training_csv_sha256": {
+    "human_only.csv": "04d34846ccbae675c185f1c40d6b99b5b51ae70af6f68cdc9163b9f5d79514fa",
+    "training_data.csv": "2620c9d11206294b59e62f62279192655224781a9639559516973cd8549ff89c"
+  }
+}
