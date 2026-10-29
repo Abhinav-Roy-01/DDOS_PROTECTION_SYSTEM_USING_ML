@@ -4,8 +4,10 @@ ML-based application-layer (L7) bot/DDoS behavioral detection system.
 Rebuilt scaffold for a real, deployed, protected demo target — not just a
 local simulation.
 
-**Status:** Phase 0 — scaffold + roadmap. No live code yet; being built
-incrementally per PHASE, one folder at a time.
+**Status:** Phase 1 foundation — Flask API, Redis-backed rate limiting,
+admin controls, nginx example, and automated tests are implemented. The ML
+detector, protected demo form, CAPTCHA, dashboard, and retraining workflow
+are still in progress.
 
 ## What this project actually does (read this first)
 
@@ -51,9 +53,33 @@ Phase 5  Load testing + observability
 Phase 6  Validation + documentation
 ```
 
-Each phase's files currently exist as stubs — a docstring/comment block
-explaining what goes there and which phase builds it, nothing functional
-yet. They get filled in one phase at a time.
+The API and rate-limiter are functional. Remaining components are filled in
+one phase at a time, keeping the main branch runnable and tested.
+
+## Run the local stack
+
+Requirements: Docker Desktop with Docker Compose. From the repository root,
+copy `.env.example` to `.env` and set `ADMIN_API_KEY` to a unique value.
+Generate one with:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Start the app, nginx, and Redis:
+
+```powershell
+docker compose -f INFRA/DOCKER/COMPOSE.yml up --build
+```
+
+Open `http://127.0.0.1:8090/health`. Admin endpoints are available through
+nginx; send the configured key in the `X-Admin-Key` header. The Redis port
+is not published to the host. Stop the local stack with Ctrl+C, then run
+`docker compose -f INFRA/DOCKER/COMPOSE.yml down`.
+
+This is a local prototype only; it is not the public production deployment.
+See [INFRA/DEPLOY.md](INFRA/DEPLOY.md) for deployment status and owner-only
+AWS and DNS steps.
 
 ## Quick links
 

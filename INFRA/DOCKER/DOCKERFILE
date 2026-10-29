@@ -1,0 +1,13 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app/API
+
+COPY API/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+COPY API/ /app/API/
+
+CMD ["gunicorn", "--chdir", "/app/API", "SERVER:create_app()", "--workers", "1", "--bind", "0.0.0.0:8080", "--access-logfile", "-", "--error-logfile", "-"]

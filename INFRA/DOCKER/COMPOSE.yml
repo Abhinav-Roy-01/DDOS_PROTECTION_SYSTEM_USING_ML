@@ -1,0 +1,41 @@
+services:
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: ../..
+      dockerfile: INFRA/DOCKER/DOCKERFILE
+    environment:
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      ENVIRONMENT: development
+      REDIS_URL: redis://redis:6379/0
+      TRUSTED_PROXY_COUNT: "1"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  nginx:
+    image: nginx:1.27
+    ports:
+      - "127.0.0.1:8090:80"
+    volumes:
+      - ./NGINX.LOCAL.CONF:/etc/nginx/nginx.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
