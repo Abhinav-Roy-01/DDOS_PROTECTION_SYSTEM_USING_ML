@@ -201,7 +201,7 @@ def test_dashboard_shell_and_admin_data_endpoints(client, monkeypatch):
             return {
                 "degraded": False,
                 "model_version": "test-version",
-                "thresholds": {"block_below": -0.055, "captcha_below": -0.015},
+                "thresholds": {"block_below": -0.14, "captcha_below": -0.015},
             }
 
     monkeypatch.setattr(DEMO_ROUTES, "_engine", DashboardEngine())

@@ -24,7 +24,7 @@ FEATURES = [
     "scroll_events",
     "keystroke_count",
 ]
-DEFAULT_THRESHOLDS = {"block_below": -0.055, "captcha_below": -0.015}
+DEFAULT_THRESHOLDS = {"block_below": -0.14, "captcha_below": -0.015}
 MODEL_FILES = ("aethercept_model.pkl", "aethercept_scaler.pkl")
 MODEL_DIR = Path(__file__).resolve().parents[1] / "ML" / "MODELS"
 RELOAD_INTERVAL_SECONDS = 5

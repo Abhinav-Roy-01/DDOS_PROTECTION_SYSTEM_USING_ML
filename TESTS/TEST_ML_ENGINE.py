@@ -88,12 +88,29 @@ def test_validate_features_rejects_invalid_values(mutation):
 
 def test_route_score_includes_captcha_threshold_boundaries():
     """Scores at either configured threshold enter the CAPTCHA band."""
-    thresholds = {"block_below": -0.055, "captcha_below": -0.015}
+    thresholds = {"block_below": -0.14, "captcha_below": -0.015}
 
-    assert ML_ENGINE.route_score(-0.056, thresholds) == "blocked"
-    assert ML_ENGINE.route_score(-0.055, thresholds) == "captcha"
+    assert ML_ENGINE.route_score(-0.141, thresholds) == "blocked"
+    assert ML_ENGINE.route_score(-0.14, thresholds) == "captcha"
     assert ML_ENGINE.route_score(-0.015, thresholds) == "captcha"
     assert ML_ENGINE.route_score(-0.014, thresholds) == "allowed"
+
+
+def test_slow_human_browser_telemetry_is_challenged_not_blocked(model_dir):
+    """Long human interaction gaps fall to CAPTCHA instead of a hard block."""
+    engine = ML_ENGINE.MLEngine(model_dir)
+    slow_human = {
+        "click_count": 6,
+        "avg_click_interval": 5266.64,
+        "click_interval_variance": 16985180.40,
+        "click_interval_entropy": 1.6094379124341005,
+        "mouse_velocity_variance": 0.3496302911555253,
+        "max_element_click_rate": 0.07594773277031176,
+        "scroll_events": 126,
+        "keystroke_count": 54,
+    }
+
+    assert engine.predict(slow_human)["verdict"] == "captcha"
 
 
 def test_bootstrapped_model_routes_the_known_human_and_bot(model_dir):

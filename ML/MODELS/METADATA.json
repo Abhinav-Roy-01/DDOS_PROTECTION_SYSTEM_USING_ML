@@ -35,7 +35,7 @@
   "scikit_learn_version": "1.9.0",
   "seed": 42,
   "thresholds": {
-    "block_below": -0.055,
+    "block_below": -0.14,
     "captcha_below": -0.015
   },
   "trained_at": "2026-10-29T18:02:07.311603+00:00",

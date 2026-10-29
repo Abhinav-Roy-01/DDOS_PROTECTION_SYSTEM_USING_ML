@@ -26,7 +26,7 @@ def test_bootstrap_writes_model_bundle_and_metadata(tmp_path):
     assert stored_metadata["artifact_sha256"]["aethercept_model.pkl"]
     assert stored_metadata["training_csv_sha256"]["human_only.csv"]
     assert thresholds["model_version"] == metadata["model_version"]
-    assert thresholds["block_below"] == -0.055
+    assert thresholds["block_below"] == -0.14
     assert thresholds["captcha_below"] == -0.015
     assert np.isfinite(metadata["row_counts"]["base_human"])
 

@@ -20,3 +20,5 @@
   IDs/security headers, readiness reporting, and the live dashboard.
 - Added human-canary quality gates, retraining rollback/backup handling,
   shared Redis job locking, admin status endpoints, and a scheduler client.
+- Calibrated the bootstrap model's hard-block boundary so the observed
+  long-gap human browser sample is challenged instead of immediately blocked.
